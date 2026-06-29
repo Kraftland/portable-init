@@ -43,13 +43,12 @@ pub enum Loglevel {
 	Fatal,
 }
 
-pub async fn log_internal(tx: tokio::sync::mpsc::Sender<LogMessage>, level: Loglevel, msg: String) {
-	tx.send(LogMessage { level: level, message: msg }).await.ok();
-}
-
 pub fn log(tx: &tokio::sync::mpsc::Sender<LogMessage>, level: Loglevel, msg: String) {
 	let tx_new = tx.clone();
-	tokio::spawn(async {
-		log_internal(tx_new, level, msg).await;
+	tokio::spawn(async move {
+		tx_new.send(LogMessage{
+			level:		level,
+			message:	msg,
+		}).await
 	});
 }
