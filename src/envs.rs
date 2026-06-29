@@ -10,8 +10,8 @@ pub enum EnvsError {
 
 #[derive(Debug)]
 pub struct ConfigOpts {
-	lockdown:		bool,
-	has_flatpak_info:	bool,
+	pub lockdown:		bool,
+	pub has_flatpak_info:	bool,
 }
 
 pub fn get_configurations() -> Result<ConfigOpts, EnvsError> {
