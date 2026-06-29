@@ -1,5 +1,6 @@
 mod logger;
 use tokio::sync::mpsc;
+mod seccomp;
 
 #[tokio::main]
 async fn main() {
