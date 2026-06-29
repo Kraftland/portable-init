@@ -4,26 +4,26 @@ use tokio;
 pub async fn logg_worker(mut rx: tokio::sync::mpsc::Receiver<LogMessage>) {
 	loop {
 		let request = rx.recv().await.unwrap();
-		match request.Level {
-			LogLevel::Debug
+		match request.level {
+			Loglevel::Debug
 				=> println!(
 					"\x1b[38;2;125;241;118m[Init]\x1b[0m: {}",
-					request.Message,
+					request.message,
 				),
-			LogLevel::Info
+			Loglevel::Info
 				=> println!(
 					"\x1b[38;2;119;222;250m[Init]\x1b[0m: {}",
-					request.Message,
+					request.message,
 				),
-			LogLevel::Warn
+			Loglevel::Warn
 				=> println!(
 					"\x1b[38;2;255;209;59m[Init]\x1b[0m: {}",
-					request.Message,
+					request.message,
 				),
-			LogLevel::Fatal
+			Loglevel::Fatal
 				=> println!(
 					"\x1b[38;2;255;0;0m[Init]\x1b[0m: {}",
-					request.Message,
+					request.message,
 				)
 		}
 	}
@@ -31,23 +31,23 @@ pub async fn logg_worker(mut rx: tokio::sync::mpsc::Receiver<LogMessage>) {
 
 #[derive(Debug)]
 pub struct LogMessage {
-	Level:		LogLevel,
-	Message:	String,
+	level:		Loglevel,
+	message:	String,
 }
 
 #[derive(Debug)]
-pub enum LogLevel {
+pub enum Loglevel {
 	Debug,
 	Info,
 	Warn,
 	Fatal,
 }
 
-pub async fn log_internal(tx: tokio::sync::mpsc::Sender<LogMessage>, level: LogLevel, msg: String) {
-	tx.send(LogMessage { Level: level, Message: msg }).await.ok();
+pub async fn log_internal(tx: tokio::sync::mpsc::Sender<LogMessage>, level: Loglevel, msg: String) {
+	tx.send(LogMessage { level: level, message: msg }).await.ok();
 }
 
-pub fn log(tx: &tokio::sync::mpsc::Sender<LogMessage>, level: LogLevel, msg: String) {
+pub fn log(tx: &tokio::sync::mpsc::Sender<LogMessage>, level: Loglevel, msg: String) {
 	let tx_new = tx.clone();
 	tokio::spawn(async {
 		log_internal(tx_new, level, msg).await;
