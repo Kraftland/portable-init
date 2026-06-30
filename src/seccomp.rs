@@ -103,6 +103,7 @@ pub fn compile_syscall_list(
 		process:	Vec<String>,
 		process_notify:	Vec<String>,
 		setuid:		Vec<String>,
+		signal:		Vec<String>,
 	}
 
 	let syscall_by_names = SyscallByNames {
@@ -472,6 +473,22 @@ pub fn compile_syscall_list(
 			"setuid".into(),
 			"setuid32".into(),
 		],
+		signal: vec![
+			"rt_sigaction".into(),
+			"rt_sigpending".into(),
+			"rt_sigprocmask".into(),
+			"rt_sigsuspend".into(),
+			"rt_sigtimedwait".into(),
+			"rt_sigtimedwait_time64".into(),
+			"sigaction".into(),
+			"sigaltstack".into(),
+			"signal".into(),
+			"signalfd".into(),
+			"signalfd4".into(),
+			"sigpending".into(),
+			"sigprocmask".into(),
+			"sigsuspend".into(),
+		],
 	};
 
 	let allowed_syscall_group = vec![
@@ -486,6 +503,7 @@ pub fn compile_syscall_list(
 		syscall_by_names.resources,
 		syscall_by_names.sync,
 		syscall_by_names.process,
+		syscall_by_names.signal,
 	];
 	let denied_syscall_group: Vec<Vec<String>> = vec![
 		syscall_by_names.clock,
