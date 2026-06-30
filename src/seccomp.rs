@@ -100,6 +100,8 @@ pub fn compile_syscall_list(
 		resources:	Vec<String>,
 		swap:		Vec<String>,
 		sync:		Vec<String>,
+		process:	Vec<String>,
+		process_notify:	Vec<String>,
 	}
 
 	let syscall_by_names = SyscallByNames {
@@ -427,6 +429,32 @@ pub fn compile_syscall_list(
 			"sync_file_range2".into(),
 			"syncfs".into(),
 		],
+		process: vec![
+			"capget".into(),
+			"clone".into(),
+			"clone3".into(),
+			"fork".into(),
+			"getrusage".into(),
+			"kill".into(),
+			"pidfd_open".into(),
+			"pidfd_send_signal".into(),
+			"prctl".into(),
+			"rt_sigqueueinfo".into(),
+			"rt_tgsigqueueinfo".into(),
+			"swapcontext".into(),
+			"tgkill".into(),
+			"times".into(),
+			"tkill".into(),
+			"unshare".into(),
+			"vfork".into(),
+			"wait4".into(),
+			"waitid".into(),
+			"waitpid".into(),
+		],
+		process_notify: vec![
+			"setns".into(),
+			"execveat".into(),
+		],
 	};
 
 	let allowed_syscall_group = vec![
@@ -440,6 +468,7 @@ pub fn compile_syscall_list(
 		syscall_by_names.pkey,
 		syscall_by_names.resources,
 		syscall_by_names.sync,
+		syscall_by_names.process,
 	];
 	let denied_syscall_group: Vec<Vec<String>> = vec![
 		syscall_by_names.clock,
@@ -456,6 +485,7 @@ pub fn compile_syscall_list(
 	let lockdown_syscall_group: Vec<Vec<String>> = vec![
 		syscall_by_names.keyring,
 		syscall_by_names.mount,
+		syscall_by_names.process_notify,
 	];
 
 	let mut allowed_syscalls: Vec<libseccomp::ScmpSyscall> = vec![];
