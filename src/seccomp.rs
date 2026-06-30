@@ -98,6 +98,7 @@ pub fn compile_syscall_list(
 		raw_io:		Vec<String>,
 		reboot:		Vec<String>,
 		resources:	Vec<String>,
+		swap:		Vec<String>,
 	}
 
 	let syscall_by_names = SyscallByNames {
@@ -412,6 +413,10 @@ pub fn compile_syscall_list(
 			"setpriority".into(),
 			"setrlimit".into(),
 		],
+		swap: vec![
+			"swapon".into(),
+			"swapoff".into(),
+		],
 	};
 
 	let allowed_syscall_group = vec![
@@ -432,6 +437,7 @@ pub fn compile_syscall_list(
 		syscall_by_names.chown,
 		syscall_by_names.raw_io,
 		syscall_by_names.reboot,
+		syscall_by_names.swap,
 	];
 	let debug_syscall_group: Vec<Vec<String>> = vec![
 		syscall_by_names.debug,
