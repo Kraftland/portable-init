@@ -6,13 +6,13 @@ mod envs;
 #[tokio::main]
 async fn main() -> std::process::ExitCode {
 
-	let (tx, rx) = mpsc::channel::<logger::LogMessage>(16);
+	let (tx, rx) = mpsc::channel::<logger::LogMessage>(128);
 
 	let config_opts = envs::get_configurations();
 	let config_opts = match config_opts {
 		Ok(conf) => conf,
 		Err(e) => {
-			logger::log(&tx, logger::Loglevel::Fatal, format!("{e}:?"));
+			logger::log(&tx, logger::Loglevel::Fatal, format!("{e}:?")).await;
 			return std::process::ExitCode::FAILURE;
 		}
 	};
@@ -27,7 +27,7 @@ async fn main() -> std::process::ExitCode {
 					&tx_clone_compile_syscall,
 					logger::Loglevel::Fatal,
 					format!("{e}"),
-				);
+				).await;
 				return
 			}
 		};
@@ -39,7 +39,7 @@ async fn main() -> std::process::ExitCode {
 					&tx_clone_compile_syscall,
 					logger::Loglevel::Fatal,
 					format!("{e:#?}"),
-				);
+				).await;
 				return
 			}
 		};
@@ -47,12 +47,20 @@ async fn main() -> std::process::ExitCode {
 			&tx_clone_compile_syscall,
 			logger::Loglevel::Info,
 			"Loaded seccomp filter".into(),
+		).await;
+
+		let tx_clone = tx_clone_compile_syscall.clone();
+
+		std::thread::spawn(
+			move || {
+				seccomp::process_seccomp_unotify(fd, &tx_clone);
+			}
 		);
 	});
 
 	let _ = tokio::spawn(logger::logg_worker(rx));
 
-	logger::log(&tx, logger::Loglevel::Debug, "Hello, World".to_string());
+	logger::log(&tx, logger::Loglevel::Debug, "Hello, World".to_string()).await;
 	std::thread::sleep(std::time::Duration::from_secs(5));
 
 
@@ -64,7 +72,7 @@ async fn main() -> std::process::ExitCode {
 				&tx,
 				logger::Loglevel::Fatal,
 				format!("Could not dispatch seccomp thread: {e:#?}"),
-			);
+			).await;
 		}
 	};
 
