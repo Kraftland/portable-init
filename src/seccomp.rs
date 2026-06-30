@@ -46,14 +46,7 @@ pub fn load_seccomp_filter (
 				}
 			};
 			let result = filter.set_act_badarch(
-				libseccomp::ScmpAction::Errno(
-					std::io::Error::new(
-						std::io::ErrorKind::Unsupported,
-						"Architecture unsupported",
-					)
-					.raw_os_error()
-					.unwrap()
-			));
+				libseccomp::ScmpAction::Errno(1));
 
 			match result {
 				Ok(_) => {},
