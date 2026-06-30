@@ -80,13 +80,14 @@ pub fn compile_syscall_list(
 	logtx: &tokio::sync::mpsc::Sender<LogMessage>,
 ) -> Result<SyscallList, SyscallCompileError> {
 	struct SyscallByNames {
-		async_io: Vec<String>, // @aio
-		basic_io: Vec<String>, // @basic-io
-		chown: Vec<String>,
-		clock: Vec<String>,
-		debug: Vec<String>,
-		fs_op: Vec<String>, // @file-system
-		io_ev: Vec<String>, // @io-event
+		async_io:	Vec<String>, // @aio
+		basic_io:	Vec<String>, // @basic-io
+		chown:		Vec<String>,
+		clock:		Vec<String>,
+		debug:		Vec<String>,
+		fs_op:		Vec<String>, // @file-system
+		io_ev:		Vec<String>, // @io-event
+		ipc:		Vec<String>,
 	}
 
 	let syscall_by_names = SyscallByNames {
@@ -251,6 +252,36 @@ pub fn compile_syscall_list(
 			"pselect6".into(),
 			"pselect6_time64".into(),
 			"select".into(),
+		],
+		ipc: vec![
+			"ipc".into(),
+			"memfd_create".into(),
+			"mq_getsetattr".into(),
+			"mq_notify".into(),
+			"mq_open".into(),
+			"mq_timedreceive".into(),
+			"mq_timedreceive_time64".into(),
+			"mq_timedsend".into(),
+			"mq_timedsend_time64".into(),
+			"mq_unlink".into(),
+			"msgctl".into(),
+			"msgget".into(),
+			"msgrcv".into(),
+			"msgsnd".into(),
+			"pipe".into(),
+			"pipe2".into(),
+			"process_madvise".into(),
+			"process_vm_readv".into(),
+			"process_vm_writev".into(),
+			"semctl".into(),
+			"semget".into(),
+			"semop".into(),
+			"semtimedop".into(),
+			"semtimedop_time64".into(),
+			"shmat".into(),
+			"shmctl".into(),
+			"shmdt".into(),
+			"shmget".into(),
 		],
 	};
 
