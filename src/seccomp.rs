@@ -457,6 +457,7 @@ pub fn compile_syscall_list(
 		process_notify: vec![
 			"setns".into(),
 			"execveat".into(),
+			"execv".into(),
 		],
 		setuid: vec![
 			"setgid".into(),
