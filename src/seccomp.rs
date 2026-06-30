@@ -9,6 +9,17 @@ pub enum SeccompError {
 	AddRuleError(libseccomp::error::SeccompError)
 }
 
+#[derive(Error,Debug)]
+enum SyscallCompileError {
+
+}
+
+#[derive(Debug)]
+struct SyscallList {
+	deny_list: Vec<i32>,
+	allow_list: Vec<i32>,
+}
+
 // Loads a Secure Computing filter
 pub fn load_seccomp_filter (config_env: &crate::envs::ConfigOpts) -> Result<(), SeccompError> {
 	let filter = libseccomp::ScmpFilterContext::new(
@@ -56,7 +67,7 @@ pub fn load_seccomp_filter (config_env: &crate::envs::ConfigOpts) -> Result<(), 
 	}
 
 
-
 	Ok(())
 }
 
+pub fn compile_syscall_list() -> Result<SyscallList, SyscallCompileError> {}
