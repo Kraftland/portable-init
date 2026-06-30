@@ -83,20 +83,26 @@ pub fn load_seccomp_filter (
 	let filter_result = filter_result.add_arch(
 		libseccomp::ScmpArch::Native
 	);
-	match filter_result {
-		Ok(_)	=>	{},
+	let filter_result = match filter_result {
+		Ok(v)	=>	{v},
 		Err(e)	=>	{
 			return Err(SeccompError::AddRuleError(e));
 		},
-	}
+	};
 
+	for val in syscall_list.deny_list.iter() {
+		let result = filter_result.add_rule(
+			libseccomp::ScmpAction::Notify,
+			*val,
+		);
+		match result {
+			Ok(_)	=> {},
+			Err(e)	=> {
+				return Err(SeccompError::AddRuleError(e))
+			},
+		}
+	};
 
-	match filter_result {
-		Ok(_)	=>	{},
-		Err(e)	=>	{
-			return Err(SeccompError::AddRuleError(e));
-		},
-	}
 
 	// TODO: handle debug, denied and allowed syscall list
 
