@@ -103,6 +103,18 @@ pub fn load_seccomp_filter (
 		}
 	};
 
+	for val in syscall_list.allow_list.iter() {
+		let result = filter_result.add_rule(
+			libseccomp::ScmpAction::Allow,
+			*val,
+		);
+		match result {
+			Ok(_)	=> {},
+			Err(e)	=> {
+				return Err(SeccompError::AddRuleError(e))
+			},
+		}
+	};
 
 	// TODO: handle debug, denied and allowed syscall list
 
