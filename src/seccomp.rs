@@ -19,6 +19,7 @@ pub enum SyscallCompileError {
 pub struct SyscallList {
 	pub deny_list: Vec<libseccomp::ScmpSyscall>,
 	pub allow_list: Vec<libseccomp::ScmpSyscall>,
+	pub debug_list: Vec<libseccomp::ScmpSyscall>,
 }
 
 // Loads a Secure Computing filter
@@ -69,6 +70,7 @@ pub fn load_seccomp_filter (
 		},
 	}
 
+	// TODO: handle debug, denied and allowed syscall list
 
 	Ok(())
 }
@@ -81,6 +83,7 @@ pub fn compile_syscall_list(
 		basic_io: Vec<String>, // @basic-io
 		chown: Vec<String>,
 		clock: Vec<String>,
+		debug: Vec<String>,
 	}
 
 	let syscall_by_names = SyscallByNames {
@@ -127,6 +130,15 @@ pub fn compile_syscall_list(
 			"clock_settime".into(),
 			"clock_settime64".into(),
 			"settimeofday".into(),
+		],
+		debug: vec![
+			"lookup_dcookie".into(),
+			"perf_event_open".into(),
+			"pidfd_getfd".into(),
+			"ptrace".into(),
+			"rtas".into(),
+			"s390_runtime_instr".into(),
+			"sys_debug_setcontext".into(),
 		]
 	};
 
@@ -138,9 +150,13 @@ pub fn compile_syscall_list(
 	let denied_syscall_group: Vec<Vec<String>> = vec![
 		syscall_by_names.clock,
 	];
+	let debug_syscall_group: Vec<Vec<String>> = vec![
+		syscall_by_names.debug,
+	];
 
 	let mut allowed_syscalls: Vec<libseccomp::ScmpSyscall> = vec![];
 	let mut denied_syscalls: Vec<libseccomp::ScmpSyscall> = vec![];
+	let mut debug_syscalls: Vec<libseccomp::ScmpSyscall> = vec![];
 
 	for val in allowed_syscall_group.iter() {
 		for name in val.iter() {
@@ -166,9 +182,22 @@ pub fn compile_syscall_list(
 		}
 	}
 
+	for val in debug_syscall_group.iter() {
+		for name in val.iter() {
+			let syscall = get_syscall_by_name(&name, logtx);
+			match syscall {
+				Some(val)	=> {
+					debug_syscalls.push(val);
+				}
+				None		=> {}
+			}
+		}
+	}
+
 	let ret = SyscallList{
 		allow_list: allowed_syscalls,
 		deny_list: denied_syscalls,
+		debug_list: debug_syscalls,
 	};
 
 	crate::logger::log(
@@ -179,9 +208,10 @@ pub fn compile_syscall_list(
 		logtx,
 		crate::logger::Loglevel::Debug,
 		format!(
-			"{} allowed syscalls, {} denied syscalls",
+			"{} allowed syscalls, {} denied syscalls, {} debug syscalls",
 			ret.allow_list.len(),
 			ret.deny_list.len(),
+			ret.debug_list.len(),
 		));
 
 	Ok(ret)
