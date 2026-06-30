@@ -96,6 +96,7 @@ pub fn compile_syscall_list(
 		obsolete:	Vec<String>,
 		pkey:		Vec<String>, // memory protection keys
 		raw_io:		Vec<String>,
+		reboot:		Vec<String>,
 	}
 
 	let syscall_by_names = SyscallByNames {
@@ -390,6 +391,11 @@ pub fn compile_syscall_list(
 			"s390_pci_mmio_read".into(),
 			"s390_pci_mmio_write".into(),
 		],
+		reboot: vec![
+			"kexec_file_load".into(),
+			"kexec_load".into(),
+			"reboot".into(),
+		],
 	};
 
 	let allowed_syscall_group = vec![
@@ -408,6 +414,7 @@ pub fn compile_syscall_list(
 		syscall_by_names.obsolete,
 		syscall_by_names.chown,
 		syscall_by_names.raw_io,
+		syscall_by_names.reboot,
 	];
 	let debug_syscall_group: Vec<Vec<String>> = vec![
 		syscall_by_names.debug,
