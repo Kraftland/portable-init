@@ -37,11 +37,12 @@ pub fn process_seccomp_unotify (
 	let execve_id = match execve_id {
 		Ok(val) => val,
 		Err(e)	=> {
-			crate::logger::log(
+			crate::logger::log_sync(
 				&logtx,
 				crate::logger::Loglevel::Fatal,
-				format!("Could not resolve execve syscall ID: {e:#?}"));
-				return;
+				format!("Could not resolve execve syscall ID: {e:#?}"),
+			);
+			return;
 		}
 	};
 
@@ -52,7 +53,7 @@ pub fn process_seccomp_unotify (
 	let raw_eperm_err = match raw_eperm_err {
 		Some(val)	=> val,
 		None	=> {
-			crate::logger::log(
+			crate::logger::log_sync(
 				&logtx,
 				crate::logger::Loglevel::Fatal,
 				format!("Could not resolve EPERM integer: None"));
@@ -65,7 +66,7 @@ pub fn process_seccomp_unotify (
 		let request = match request {
 			Ok(val)	=> val,
 			Err(e)	=> {
-				crate::logger::log(
+				crate::logger::log_sync(
 					&logtx,
 					crate::logger::Loglevel::Fatal,
 					format!("Could not receive seccomp notification: {e:#?}"));
@@ -81,7 +82,7 @@ pub fn process_seccomp_unotify (
 			match response.respond(fd) {
 				Ok(_)	=> {},
 				Err(e)	=> {
-					crate::logger::log(
+					crate::logger::log_sync(
 						&logtx,
 						crate::logger::Loglevel::Warn,
 						format!(
@@ -100,7 +101,7 @@ pub fn process_seccomp_unotify (
 				format!("unresolved syscall ({:#?})", e)
 			}
 		};
-		crate::logger::log(
+		crate::logger::log_sync(
 			&logtx,
 			crate::logger::Loglevel::Warn,
 			format!(
@@ -118,7 +119,7 @@ pub fn process_seccomp_unotify (
 		match response.respond(fd) {
 			Ok(_)	=> {},
 			Err(e)	=> {
-				crate::logger::log(
+				crate::logger::log_sync(
 					&logtx,
 					crate::logger::Loglevel::Warn,
 					format!(
@@ -929,7 +930,7 @@ pub fn compile_syscall_list(
 		selective: lockdown_syscalls,
 	};
 
-	crate::logger::log(
+	crate::logger::log_sync(
 		logtx,
 		crate::logger::Loglevel::Debug,
 		format!(
@@ -952,7 +953,7 @@ fn get_syscall_by_name(
 	match result {
 		Ok(val)	=>	Some(val),
 		Err(e)	=>	{
-			crate::logger::log(
+			crate::logger::log_sync(
 				logtx,
 				crate::logger::Loglevel::Debug,
 				format!("Could not resolve syscall from name {name}: {e:#?}"));
