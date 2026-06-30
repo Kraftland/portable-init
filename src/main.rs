@@ -5,7 +5,27 @@ mod envs;
 
 #[tokio::main]
 async fn main() -> std::process::ExitCode {
+
 	let (tx, rx) = mpsc::channel::<logger::LogMessage>(16);
+
+	let tx_clone_compile_syscall = tx.clone();
+	tokio::spawn(async move {
+		let result = seccomp::compile_syscall_list(&tx_clone_compile_syscall);
+		match result {
+			Ok(val)	=> val,
+			Err(e)	=> {
+				logger::log(
+					&tx_clone_compile_syscall,
+					logger::Loglevel::Fatal,
+					format!("{e}"),
+				);
+				seccomp::SyscallList{
+					allow_list: vec![],
+					deny_list: vec![],
+				}
+			}
+		}
+	});
 
 	let _ = tokio::spawn(logger::logg_worker(rx));
 
