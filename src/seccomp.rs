@@ -86,6 +86,7 @@ pub fn compile_syscall_list(
 		clock: Vec<String>,
 		debug: Vec<String>,
 		fs_op: Vec<String>, // @file-system
+		io_ev: Vec<String>, // @io-event
 	}
 
 	let syscall_by_names = SyscallByNames {
@@ -232,6 +233,25 @@ pub fn compile_syscall_list(
 			"utimensat_time64".into(),
 			"utimes".into(),
 		],
+		io_ev: vec![
+			"_newselect".into(),
+			"epoll_create".into(),
+			"epoll_create1".into(),
+			"epoll_ctl".into(),
+			"epoll_ctl_old".into(),
+			"epoll_pwait".into(),
+			"epoll_pwait2".into(),
+			"epoll_wait".into(),
+			"epoll_wait_old".into(),
+			"eventfd".into(),
+			"eventfd2".into(),
+			"poll".into(),
+			"ppoll".into(),
+			"ppoll_time64".into(),
+			"pselect6".into(),
+			"pselect6_time64".into(),
+			"select".into(),
+		],
 	};
 
 	let allowed_syscall_group = vec![
@@ -239,6 +259,7 @@ pub fn compile_syscall_list(
 		syscall_by_names.basic_io,
 		syscall_by_names.chown,
 		syscall_by_names.fs_op,
+		syscall_by_names.io_ev,
 	];
 	let denied_syscall_group: Vec<Vec<String>> = vec![
 		syscall_by_names.clock,
