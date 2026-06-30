@@ -175,6 +175,14 @@ pub fn compile_syscall_list(
 		logtx,
 		crate::logger::Loglevel::Debug,
 		format!("Compiled seccomp allow list and deny list: {ret:#?}"));
+	crate::logger::log(
+		logtx,
+		crate::logger::Loglevel::Debug,
+		format!(
+			"{} allowed syscalls, {} denied syscalls",
+			ret.allow_list.len(),
+			ret.deny_list.len(),
+		));
 
 	Ok(ret)
 
@@ -191,7 +199,7 @@ fn get_syscall_by_name(
 			crate::logger::log(
 				logtx,
 				crate::logger::Loglevel::Warn,
-				format!("Could not resolve syscall {name}: {e}"));
+				format!("{e:#?}"));
 			None
 		}
 	}
