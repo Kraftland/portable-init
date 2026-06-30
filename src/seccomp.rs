@@ -7,7 +7,13 @@ pub enum SeccompError {
 	CreateFilterError(libseccomp::error::SeccompError),
 
 	#[error("Could not add filter rule: {0:?}")]
-	AddRuleError(libseccomp::error::SeccompError)
+	AddRuleError(libseccomp::error::SeccompError),
+
+	#[error("Could not load filter into kernel: {0:?}")]
+	LoadFilterError(libseccomp::error::SeccompError),
+
+	#[error("Could not get notify fd: {0:?}")]
+	GetFdError(libseccomp::error::SeccompError),
 }
 
 #[derive(Error,Debug)]
@@ -26,7 +32,7 @@ pub struct SyscallList {
 // Loads a Secure Computing filter
 pub fn load_seccomp_filter (
 	config_env: &crate::envs::ConfigOpts,
-	syscall_list: &SyscallList) -> Result<(), SeccompError> {
+	syscall_list: &SyscallList) -> Result<libseccomp::ScmpFd, SeccompError> {
 
 	let mut filter_result = match config_env.lockdown {
 		true	=>	{
@@ -180,7 +186,24 @@ pub fn load_seccomp_filter (
 
 	// TODO: handle debug, denied and allowed syscall list
 
-	Ok(())
+
+	let result = filter_result.precompute();
+	match result {
+		Ok(_)	=> {},
+		Err(e)	=> return Err(SeccompError::LoadFilterError(e))
+	};
+
+	let result = filter_result.load();
+	match result {
+		Ok(_)	=> {},
+		Err(e)	=> return Err(SeccompError::LoadFilterError(e))
+	};
+
+	let result = filter_result.get_notify_fd();
+	match result {
+		Ok(fd)	=> Ok(fd),
+		Err(e)	=> Err(SeccompError::GetFdError(e))
+	}
 }
 
 pub fn compile_syscall_list(
