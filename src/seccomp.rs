@@ -94,6 +94,7 @@ pub fn compile_syscall_list(
 		mount:		Vec<String>,
 		network:	Vec<String>, // @network-io
 		obsolete:	Vec<String>,
+		pkey:		Vec<String>, // memory protection keys
 	}
 
 	let syscall_by_names = SyscallByNames {
@@ -374,6 +375,11 @@ pub fn compile_syscall_list(
 			"ustat".into(),
 			"vserver".into(),
 		],
+		pkey: vec![
+			"pkey_alloc".into(),
+			"pkey_free".into(),
+			"pkey_mprotect".into(),
+		],
 	};
 
 	let allowed_syscall_group = vec![
@@ -385,6 +391,7 @@ pub fn compile_syscall_list(
 		syscall_by_names.ipc,
 		syscall_by_names.memlock,
 		syscall_by_names.network,
+		syscall_by_names.pkey,
 	];
 	let denied_syscall_group: Vec<Vec<String>> = vec![
 		syscall_by_names.clock,
