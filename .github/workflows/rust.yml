@@ -12,17 +12,14 @@ env:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: archlinux-latest
 
     steps:
     - uses: actions/checkout@v6
 
     - name: Update repos
-      run: sudo apt-get update && sudo apt-get upgrade
+      run: sudo pacman -Syu libseccomp
 
-    - name: Install dependencies
-      run: sudo apt-get install libseccomp2 libseccomp-dev librust-libseccomp-sys-dev -y
-    
     - name: Build
       run: cargo build --verbose
     - name: Run tests
