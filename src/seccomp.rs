@@ -79,6 +79,7 @@ pub fn compile_syscall_list(
 	struct SyscallByNames {
 		async_io: Vec<String>, // @aio
 		basic_io: Vec<String>, // @basic-io
+		chown: Vec<String>,
 	}
 
 	let syscall_by_names = SyscallByNames {
@@ -108,12 +109,22 @@ pub fn compile_syscall_list(
 			"readv".into(),
 			"write".into(),
 			"writev".into(),
+		],
+		chown: vec![
+			"chown".into(),
+			"chown32".into(),
+			"fchown".into(),
+			"fchown32".into(),
+			"fchownat".into(),
+			"lchown".into(),
+			"lchown32".into(),
 		]
 	};
 
 	let allowed_syscall_group = vec![
 		syscall_by_names.async_io,
 		syscall_by_names.basic_io,
+		syscall_by_names.chown,
 	];
 	let denied_syscall_group: Vec<Vec<String>> = vec![
 
