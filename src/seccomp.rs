@@ -92,6 +92,7 @@ pub fn compile_syscall_list(
 		memlock:	Vec<String>,
 		module:		Vec<String>,
 		mount:		Vec<String>,
+		network:	Vec<String>, // @network-io
 	}
 
 	let syscall_by_names = SyscallByNames {
@@ -318,7 +319,31 @@ pub fn compile_syscall_list(
 			"pivot_root".into(),
 			"umount".into(),
 			"umount2".into(),
-		]
+		],
+		network: vec![
+			"accept".into(),
+			"accept4".into(),
+			"bind".into(),
+			"connect".into(),
+			"getpeername".into(),
+			"getsockname".into(),
+			"getsockopt".into(),
+			"listen".into(),
+			"recv".into(),
+			"recvfrom".into(),
+			"recvmmsg".into(),
+			"recvmmsg_time64".into(),
+			"recvmsg".into(),
+			"send".into(),
+			"sendmmsg".into(),
+			"sendmsg".into(),
+			"sendto".into(),
+			"setsockopt".into(),
+			"shutdown".into(),
+			"socket".into(),
+			"socketcall".into(),
+			"socketpair".into(),
+		],
 	};
 
 	let allowed_syscall_group = vec![
@@ -329,6 +354,7 @@ pub fn compile_syscall_list(
 		syscall_by_names.io_ev,
 		syscall_by_names.ipc,
 		syscall_by_names.memlock,
+		syscall_by_names.network,
 	];
 	let denied_syscall_group: Vec<Vec<String>> = vec![
 		syscall_by_names.clock,
