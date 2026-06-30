@@ -17,7 +17,32 @@ pub struct ConfigOpts {
 
 pub fn get_configurations() -> Result<ConfigOpts, EnvsError> {
 	let is_lockdown: bool;
-	let has_flatpak_info: bool;
+	let has_info: bool;
+
+	let info_env = std::env::var("_portableHasFlatpakInfo");
+	match info_env {
+		Ok(val)	=> {
+			if val == "1" {
+				has_info = true
+			} else {
+				return Err(
+					EnvsError::InvalidEnvError(
+						"_portableHasFlatpakInfo".into(),
+						val,
+					)
+				);
+			}
+		}
+		Err(e)	=> {
+			if e == std::env::VarError::NotPresent {
+				has_info = false
+			} else {
+				return Err(
+					EnvsError::NonUnicodeError(e)
+				)
+			}
+		}
+	}
 
 	let lockdown_env = std::env::var("_portableLockdown");
 
@@ -39,13 +64,10 @@ pub fn get_configurations() -> Result<ConfigOpts, EnvsError> {
 
 	if lockdown_env == with_info {
 		is_lockdown = true;
-		has_flatpak_info = true;
 	} else if lockdown_env == without_info {
 		is_lockdown = true;
-		has_flatpak_info = false;
 	} else if lockdown_env == String::from("") {
 		is_lockdown = false;
-		has_flatpak_info = false;
 	} else {
 		return Err(EnvsError::InvalidEnvError(
 			String::from("_portableLockdown"),
@@ -66,7 +88,7 @@ pub fn get_configurations() -> Result<ConfigOpts, EnvsError> {
 
 	Ok(ConfigOpts {
 		lockdown: is_lockdown,
-		has_flatpak_info: has_flatpak_info,
+		has_flatpak_info: has_info,
 		debugging: is_debugging,
 	})
 }
