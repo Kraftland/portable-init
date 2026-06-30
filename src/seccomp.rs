@@ -93,6 +93,7 @@ pub fn compile_syscall_list(
 		module:		Vec<String>,
 		mount:		Vec<String>,
 		network:	Vec<String>, // @network-io
+		obsolete:	Vec<String>,
 	}
 
 	let syscall_by_names = SyscallByNames {
@@ -344,6 +345,35 @@ pub fn compile_syscall_list(
 			"socketcall".into(),
 			"socketpair".into(),
 		],
+		obsolete: vec![
+			"_sysctl".into(),
+			"afs_syscall".into(),
+			"bdflush".into(),
+			"break".into(),
+			"create_module".into(),
+			"ftime".into(),
+			"get_kernel_syms".into(),
+			"getpmsg".into(),
+			"gtty".into(),
+			"idle".into(),
+			"lock".into(),
+			"mpx".into(),
+			"prof".into(),
+			"profil".into(),
+			"putpmsg".into(),
+			"query_module".into(),
+			"security".into(),
+			"sgetmask".into(),
+			"ssetmask".into(),
+			"stime".into(),
+			"stty".into(),
+			"sysfs".into(),
+			"tuxcall".into(),
+			"ulimit".into(),
+			"uselib".into(),
+			"ustat".into(),
+			"vserver".into(),
+		],
 	};
 
 	let allowed_syscall_group = vec![
@@ -359,6 +389,7 @@ pub fn compile_syscall_list(
 	let denied_syscall_group: Vec<Vec<String>> = vec![
 		syscall_by_names.clock,
 		syscall_by_names.module,
+		syscall_by_names.obsolete,
 	];
 	let debug_syscall_group: Vec<Vec<String>> = vec![
 		syscall_by_names.debug,
