@@ -97,6 +97,7 @@ pub fn compile_syscall_list(
 		pkey:		Vec<String>, // memory protection keys
 		raw_io:		Vec<String>,
 		reboot:		Vec<String>,
+		resources:	Vec<String>,
 	}
 
 	let syscall_by_names = SyscallByNames {
@@ -396,6 +397,21 @@ pub fn compile_syscall_list(
 			"kexec_load".into(),
 			"reboot".into(),
 		],
+		resources: vec![
+			"ioprio_set".into(),
+			"mbind".into(),
+			"migrate_pages".into(),
+			"move_pages".into(),
+			"nice".into(),
+			"sched_setaffinity".into(),
+			"sched_setattr".into(),
+			"sched_setparam".into(),
+			"sched_setscheduler".into(),
+			"set_mempolicy".into(),
+			"set_mempolicy_home_node".into(),
+			"setpriority".into(),
+			"setrlimit".into(),
+		],
 	};
 
 	let allowed_syscall_group = vec![
@@ -407,6 +423,7 @@ pub fn compile_syscall_list(
 		syscall_by_names.memlock,
 		syscall_by_names.network,
 		syscall_by_names.pkey,
+		syscall_by_names.resources,
 	];
 	let denied_syscall_group: Vec<Vec<String>> = vec![
 		syscall_by_names.clock,
