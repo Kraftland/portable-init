@@ -23,6 +23,7 @@ async fn main() -> std::process::ExitCode {
 					allow_list: vec![],
 					deny_list: vec![],
 					debug_list: vec![],
+					selective: vec![],
 				}
 			}
 		}

@@ -20,7 +20,7 @@ pub struct SyscallList {
 	pub deny_list: Vec<libseccomp::ScmpSyscall>,
 	pub allow_list: Vec<libseccomp::ScmpSyscall>,
 	pub debug_list: Vec<libseccomp::ScmpSyscall>,
-	//pub selective: Vec<libseccomp::ScmpSyscall>,
+	pub selective: Vec<libseccomp::ScmpSyscall>, // depends on lockdown
 }
 
 // Loads a Secure Computing filter
@@ -246,10 +246,13 @@ pub fn compile_syscall_list(
 	let debug_syscall_group: Vec<Vec<String>> = vec![
 		syscall_by_names.debug,
 	];
+	let lockdown_syscall_group: Vec<Vec<String>> = vec![
+	];
 
 	let mut allowed_syscalls: Vec<libseccomp::ScmpSyscall> = vec![];
 	let mut denied_syscalls: Vec<libseccomp::ScmpSyscall> = vec![];
 	let mut debug_syscalls: Vec<libseccomp::ScmpSyscall> = vec![];
+	let mut lockdown_syscalls: Vec<libseccomp::ScmpSyscall> = vec![];
 
 	for val in allowed_syscall_group.iter() {
 		for name in val.iter() {
@@ -287,10 +290,23 @@ pub fn compile_syscall_list(
 		}
 	}
 
+	for val in lockdown_syscall_group.iter() {
+		for name in val.iter() {
+			let syscall = get_syscall_by_name(&name, logtx);
+			match syscall {
+				Some(val)	=> {
+					lockdown_syscalls.push(val);
+				}
+				None		=> {}
+			}
+		}
+	}
+
 	let ret = SyscallList{
 		allow_list: allowed_syscalls,
 		deny_list: denied_syscalls,
 		debug_list: debug_syscalls,
+		selective: lockdown_syscalls,
 	};
 
 	crate::logger::log(
@@ -301,10 +317,11 @@ pub fn compile_syscall_list(
 		logtx,
 		crate::logger::Loglevel::Debug,
 		format!(
-			"{} allowed syscalls, {} denied syscalls, {} debug syscalls",
+			"{} allowed syscalls, {} denied syscalls, {} debug syscalls and {} lockdown syscalls",
 			ret.allow_list.len(),
 			ret.deny_list.len(),
 			ret.debug_list.len(),
+			ret.selective.len(),
 		));
 
 	Ok(ret)
