@@ -21,10 +21,13 @@ pub async fn logg_worker(mut rx: tokio::sync::mpsc::Receiver<LogMessage>) {
 					request.message,
 				),
 			Loglevel::Fatal
-				=> println!(
-					"\x1b[38;2;255;0;0m[Init]\x1b[0m: {}",
-					request.message,
-				)
+				=> {
+					println!(
+						"\x1b[38;2;255;0;0m[Init]\x1b[0m: {}",
+						request.message,
+					);
+					std::process::exit(1)
+				}
 		}
 	}
 }

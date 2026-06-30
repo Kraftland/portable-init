@@ -11,14 +11,14 @@ pub enum SeccompError {
 }
 
 #[derive(Error,Debug)]
-enum SyscallCompileError {
+pub enum SyscallCompileError {
 
 }
 
 #[derive(Debug)]
-struct SyscallList {
-	deny_list: Vec<libseccomp::ScmpSyscall>,
-	allow_list: Vec<libseccomp::ScmpSyscall>,
+pub struct SyscallList {
+	pub deny_list: Vec<libseccomp::ScmpSyscall>,
+	pub allow_list: Vec<libseccomp::ScmpSyscall>,
 }
 
 // Loads a Secure Computing filter
