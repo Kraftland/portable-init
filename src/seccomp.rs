@@ -66,7 +66,7 @@ pub fn load_seccomp_filter (
 		}
 		false	=>	{
 			let filter = libseccomp::ScmpFilterContext::new(
-				libseccomp::ScmpAction::Notify,
+				libseccomp::ScmpAction::Allow,
 			);
 			let mut filter = match filter {
 				Ok(val) => val,
@@ -96,49 +96,11 @@ pub fn load_seccomp_filter (
 		},
 	};
 
-	for val in syscall_list.deny_list.iter() {
-		let result = filter_result.add_rule(
-			libseccomp::ScmpAction::Notify,
-			*val,
-		);
-		match result {
-			Ok(_)	=> {},
-			Err(e)	=> {
-				return Err(SeccompError::AddRuleError(e))
-			},
-		}
-	};
 
-	for val in syscall_list.allow_list.iter() {
-		let result = filter_result.add_rule(
-			libseccomp::ScmpAction::Allow,
-			*val,
-		);
-		match result {
-			Ok(_)	=> {},
-			Err(e)	=> {
-				return Err(SeccompError::AddRuleError(e))
-			},
-		}
-	};
 
 	match config_env.lockdown {
 		true => {
-			for val in syscall_list.selective.iter() {
-				let result = filter_result.add_rule(
-					libseccomp::ScmpAction::Notify,
-					*val,
-				);
-				match result {
-					Ok(_)	=> {},
-					Err(e)	=> {
-						return Err(SeccompError::AddRuleError(e))
-					},
-				}
-			}
-		}
-		false => {
-			for val in syscall_list.selective.iter() {
+			for val in syscall_list.allow_list.iter() {
 				let result = filter_result.add_rule(
 					libseccomp::ScmpAction::Allow,
 					*val,
@@ -149,36 +111,55 @@ pub fn load_seccomp_filter (
 						return Err(SeccompError::AddRuleError(e))
 					},
 				}
-			}
+			};
+		}
+		false => {
+			for val in syscall_list.deny_list.iter() {
+				let result = filter_result.add_rule(
+					libseccomp::ScmpAction::Notify,
+					*val,
+				);
+				match result {
+					Ok(_)	=> {},
+					Err(e)	=> {
+						return Err(SeccompError::AddRuleError(e))
+					},
+				}
+			};
 		}
 	}
 
 	match config_env.debugging {
 		true => {
-			for val in syscall_list.debug_list.iter() {
-				let result = filter_result.add_rule(
-					libseccomp::ScmpAction::Allow,
-					*val,
-				);
-				match result {
-					Ok(_)	=> {},
-					Err(e)	=> {
-						return Err(SeccompError::AddRuleError(e))
-					},
+			if config_env.lockdown {
+				for val in syscall_list.debug_list.iter() {
+					let result = filter_result.add_rule(
+						libseccomp::ScmpAction::Allow,
+						*val,
+					);
+					match result {
+						Ok(_)	=> {},
+						Err(e)	=> {
+							return Err(SeccompError::AddRuleError(e))
+						},
+					}
 				}
 			}
+
 		}
 		false => {
-			for val in syscall_list.debug_list.iter() {
-				let result = filter_result.add_rule(
-					libseccomp::ScmpAction::Notify,
-					*val,
-				);
-				match result {
-					Ok(_)	=> {},
-					Err(e)	=> {
-						return Err(SeccompError::AddRuleError(e))
-					},
+			if ! config_env.lockdown {
+				for val in syscall_list.debug_list.iter() {
+					let result = filter_result.add_rule(
+						libseccomp::ScmpAction::Notify,
+						*val,
+					);
+					match result {
+						Ok(_)	=> {},
+						Err(e)	=> {
+							return Err(SeccompError::AddRuleError(e))
+						},
+					}
 				}
 			}
 		}
