@@ -723,7 +723,7 @@ pub fn compile_syscall_list(
 	crate::logger::log(
 		logtx,
 		crate::logger::Loglevel::Debug,
-		format!("Compiled seccomp allow list and deny list: {ret:#?}"));
+		//format!("Compiled seccomp allow list and deny list: {ret:#?}"));
 	crate::logger::log(
 		logtx,
 		crate::logger::Loglevel::Debug,
@@ -749,7 +749,7 @@ fn get_syscall_by_name(
 		Err(e)	=>	{
 			crate::logger::log(
 				logtx,
-				crate::logger::Loglevel::Warn,
+				crate::logger::Loglevel::Debug,
 				format!("{e:#?}"));
 			None
 		}
