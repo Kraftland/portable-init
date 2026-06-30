@@ -2,6 +2,7 @@ mod logger;
 use tokio::sync::mpsc;
 mod seccomp;
 mod envs;
+mod landlock;
 
 #[tokio::main]
 async fn main() -> std::process::ExitCode {
