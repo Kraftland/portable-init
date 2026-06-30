@@ -1,4 +1,5 @@
 use thiserror::Error;
+use crate::logger::LogMessage;
 
 #[derive(Error, Debug)]
 pub enum SeccompError {
@@ -16,12 +17,14 @@ enum SyscallCompileError {
 
 #[derive(Debug)]
 struct SyscallList {
-	deny_list: Vec<i32>,
-	allow_list: Vec<i32>,
+	deny_list: Vec<libseccomp::ScmpSyscall>,
+	allow_list: Vec<libseccomp::ScmpSyscall>,
 }
 
 // Loads a Secure Computing filter
-pub fn load_seccomp_filter (config_env: &crate::envs::ConfigOpts) -> Result<(), SeccompError> {
+pub fn load_seccomp_filter (
+	config_env: &crate::envs::ConfigOpts,
+	syscall_list: &SyscallList) -> Result<(), SeccompError> {
 	let filter = libseccomp::ScmpFilterContext::new(
 		libseccomp::ScmpAction::Allow,
 	);
@@ -70,4 +73,84 @@ pub fn load_seccomp_filter (config_env: &crate::envs::ConfigOpts) -> Result<(), 
 	Ok(())
 }
 
-pub fn compile_syscall_list() -> Result<SyscallList, SyscallCompileError> {}
+pub fn compile_syscall_list(
+	logtx: &tokio::sync::mpsc::Sender<LogMessage>,
+) -> Result<SyscallList, SyscallCompileError> {
+	struct SyscallByNames {
+		async_io: Vec<String>, // @aio
+		basic_io: Vec<String>, // @basic-io
+	}
+
+	let syscall_by_names = SyscallByNames {
+		async_io: vec![
+			"io_cancel".into(),
+			"io_destroy".into(),
+			"io_getevents".into(),
+			"io_pgetevents".into(),
+			"io_pgetevents_time64".into(),
+		],
+		basic_io: vec![
+			"_llseek".into(),
+			"close".into(),
+			"close_range".into(),
+			"dup".into(),
+			"dup2".into(),
+			"dup3".into(),
+			"llseek".into(),
+			"lseek".into(),
+			"pread64".into(),
+			"preadv".into(),
+			"preadv2".into(),
+			"pwrite64".into(),
+			"pwritev".into(),
+			"pwritev2".into(),
+			"read".into(),
+			"readv".into(),
+			"write".into(),
+			"writev".into(),
+		]
+	};
+
+	let allowed_syscall_group = vec![
+		syscall_by_names.async_io,
+		syscall_by_names.basic_io,
+	];
+
+	let mut allowed_syscalls: Vec<libseccomp::ScmpSyscall> = vec![];
+	let mut denied_syscalls: Vec<libseccomp::ScmpSyscall> = vec![];
+
+	for val in allowed_syscall_group.iter() {
+		for name in val.iter() {
+			let syscall = get_syscall_by_name(&name, logtx);
+			match syscall {
+				Some(val)	=> {
+					allowed_syscalls.push(val);
+				}
+				None		=> {}
+			}
+		}
+	};
+
+	Ok(SyscallList{
+		allow_list: allowed_syscalls,
+		deny_list: denied_syscalls,
+	})
+
+}
+
+fn get_syscall_by_name(
+	name: &String,
+	logtx: &tokio::sync::mpsc::Sender<LogMessage>,
+) -> Option<libseccomp::ScmpSyscall> {
+	let result = libseccomp::ScmpSyscall::from_name(name);
+	match result {
+		Ok(val)	=>	Some(val),
+		Err(e)	=>	{
+			crate::logger::log(
+				logtx,
+				crate::logger::Loglevel::Warn,
+				format!("Could not resolve syscall {name}: {e}"));
+			None
+		}
+	}
+}
