@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-24.04
 
     container:
-      image: archlinux@latest
+      image: archlinux:latest
 
     steps:
     - uses: actions/checkout@v6
