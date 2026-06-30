@@ -91,6 +91,7 @@ pub fn compile_syscall_list(
 		keyring:	Vec<String>,
 		memlock:	Vec<String>,
 		module:		Vec<String>,
+		mount:		Vec<String>,
 	}
 
 	let syscall_by_names = SyscallByNames {
@@ -304,6 +305,19 @@ pub fn compile_syscall_list(
 			"delete_module".into(),
 			"finit_module".into(),
 			"init_module".into(),
+		],
+		mount: vec![
+			"fsconfig".into(),
+			"fsmount".into(),
+			"fsopen".into(),
+			"fspick".into(),
+			"mount".into(),
+			"mount_setattr".into(),
+			"move_mount".into(),
+			"open_tree_attr".into(),
+			"pivot_root".into(),
+			"umount".into(),
+			"umount2".into(),
 		]
 	};
 
@@ -325,6 +339,7 @@ pub fn compile_syscall_list(
 	];
 	let lockdown_syscall_group: Vec<Vec<String>> = vec![
 		syscall_by_names.keyring,
+		syscall_by_names.mount,
 	];
 
 	let mut allowed_syscalls: Vec<libseccomp::ScmpSyscall> = vec![];
