@@ -115,6 +115,9 @@ pub fn compile_syscall_list(
 		syscall_by_names.async_io,
 		syscall_by_names.basic_io,
 	];
+	let denied_syscall_group: Vec<Vec<String>> = vec![
+
+	];
 
 	let mut allowed_syscalls: Vec<libseccomp::ScmpSyscall> = vec![];
 	let mut denied_syscalls: Vec<libseccomp::ScmpSyscall> = vec![];
@@ -130,6 +133,18 @@ pub fn compile_syscall_list(
 			}
 		}
 	};
+
+	for val in denied_syscall_group.iter() {
+		for name in val.iter() {
+			let syscall = get_syscall_by_name(&name, logtx);
+			match syscall {
+				Some(val)	=> {
+					denied_syscalls.push(val);
+				}
+				None		=> {}
+			}
+		}
+	}
 
 	Ok(SyscallList{
 		allow_list: allowed_syscalls,
