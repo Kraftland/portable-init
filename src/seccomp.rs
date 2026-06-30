@@ -254,12 +254,6 @@ pub fn load_seccomp_filter (
 		Err(e)	=> return Err(SeccompError::AddRuleError(e))
 	};
 
-	let result = filter_result.precompute();
-	match result {
-		Ok(_)	=> {},
-		Err(e)	=> return Err(SeccompError::LoadFilterError(e))
-	};
-
 	let result = filter_result.load();
 	match result {
 		Ok(_)	=> {},
