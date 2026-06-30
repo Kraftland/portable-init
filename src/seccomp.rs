@@ -385,7 +385,6 @@ pub fn compile_syscall_list(
 	let allowed_syscall_group = vec![
 		syscall_by_names.async_io,
 		syscall_by_names.basic_io,
-		syscall_by_names.chown,
 		syscall_by_names.fs_op,
 		syscall_by_names.io_ev,
 		syscall_by_names.ipc,
@@ -397,6 +396,7 @@ pub fn compile_syscall_list(
 		syscall_by_names.clock,
 		syscall_by_names.module,
 		syscall_by_names.obsolete,
+		syscall_by_names.chown,
 	];
 	let debug_syscall_group: Vec<Vec<String>> = vec![
 		syscall_by_names.debug,
