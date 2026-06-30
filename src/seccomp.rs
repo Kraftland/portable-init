@@ -88,6 +88,7 @@ pub fn compile_syscall_list(
 		fs_op:		Vec<String>, // @file-system
 		io_ev:		Vec<String>, // @io-event
 		ipc:		Vec<String>,
+		keyring:	Vec<String>,
 	}
 
 	let syscall_by_names = SyscallByNames {
@@ -283,6 +284,13 @@ pub fn compile_syscall_list(
 			"shmdt".into(),
 			"shmget".into(),
 		],
+
+		// Not sure if this is suitable for userspace
+		keyring: vec![
+			"add_key".into(),
+			"keyctl".into(),
+			"request_key".into(),
+		],
 	};
 
 	let allowed_syscall_group = vec![
@@ -300,6 +308,7 @@ pub fn compile_syscall_list(
 		syscall_by_names.debug,
 	];
 	let lockdown_syscall_group: Vec<Vec<String>> = vec![
+		syscall_by_names.keyring,
 	];
 
 	let mut allowed_syscalls: Vec<libseccomp::ScmpSyscall> = vec![];
