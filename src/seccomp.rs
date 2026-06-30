@@ -184,8 +184,11 @@ pub fn load_seccomp_filter (
 		}
 	}
 
-	// TODO: handle debug, denied and allowed syscall list
-
+	let result = filter_result.set_ctl_nnp(true);
+	match result {
+		Ok(_)	=> {},
+		Err(e)	=> return Err(SeccompError::AddRuleError(e))
+	};
 
 	let result = filter_result.precompute();
 	match result {
