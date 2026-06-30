@@ -16,3 +16,5 @@ sed -E 's/^    (.*)$/\t\t\t"\1".into(),/'
 ```
 
 of which can be invoked on the output of said tool: `cat syscall.list | bash script.sh`
+
+# Actions on filtering
