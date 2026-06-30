@@ -18,7 +18,7 @@ async fn main() -> std::process::ExitCode {
 	};
 
 	let tx_clone_compile_syscall = tx.clone();
-	tokio::spawn(async move {
+	let seccomp_result = tokio::spawn(async move {
 		let result = seccomp::compile_syscall_list(&tx_clone_compile_syscall);
 		let list = match result {
 			Ok(val)	=> val,
@@ -32,6 +32,22 @@ async fn main() -> std::process::ExitCode {
 			}
 		};
 		let result = seccomp::load_seccomp_filter(&config_opts, &list);
+		let fd = match result {
+			Ok(fd) => fd,
+			Err(e) => {
+				logger::log(
+					&tx_clone_compile_syscall,
+					logger::Loglevel::Fatal,
+					format!("{e:#?}"),
+				);
+				return
+			}
+		};
+		logger::log(
+			&tx_clone_compile_syscall,
+			logger::Loglevel::Info,
+			"Loaded seccomp filter".into(),
+		);
 	});
 
 	let _ = tokio::spawn(logger::logg_worker(rx));
@@ -39,6 +55,20 @@ async fn main() -> std::process::ExitCode {
 	logger::log(&tx, logger::Loglevel::Debug, "Hello, World".to_string());
 	std::thread::sleep(std::time::Duration::from_secs(5));
 
+
+
+	match seccomp_result.await {
+		Ok(())	=> {}
+		Err(e)	=> {
+			logger::log(
+				&tx,
+				logger::Loglevel::Fatal,
+				format!("Could not dispatch seccomp thread: {e:#?}"),
+			);
+		}
+	};
+
+	// TODO: start process
 
 	return std::process::ExitCode::SUCCESS
 }
