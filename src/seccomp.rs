@@ -89,6 +89,7 @@ pub fn compile_syscall_list(
 		io_ev:		Vec<String>, // @io-event
 		ipc:		Vec<String>,
 		keyring:	Vec<String>,
+		memlock:	Vec<String>,
 	}
 
 	let syscall_by_names = SyscallByNames {
@@ -291,6 +292,13 @@ pub fn compile_syscall_list(
 			"keyctl".into(),
 			"request_key".into(),
 		],
+		memlock: vec![
+			"mlock".into(),
+			"mlock2".into(),
+			"mlockall".into(),
+			"munlock".into(),
+			"munlockall".into(),
+		],
 	};
 
 	let allowed_syscall_group = vec![
@@ -300,6 +308,7 @@ pub fn compile_syscall_list(
 		syscall_by_names.fs_op,
 		syscall_by_names.io_ev,
 		syscall_by_names.ipc,
+		syscall_by_names.memlock,
 	];
 	let denied_syscall_group: Vec<Vec<String>> = vec![
 		syscall_by_names.clock,
