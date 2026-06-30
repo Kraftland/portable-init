@@ -80,6 +80,7 @@ pub fn compile_syscall_list(
 		async_io: Vec<String>, // @aio
 		basic_io: Vec<String>, // @basic-io
 		chown: Vec<String>,
+		clock: Vec<String>,
 	}
 
 	let syscall_by_names = SyscallByNames {
@@ -118,6 +119,14 @@ pub fn compile_syscall_list(
 			"fchownat".into(),
 			"lchown".into(),
 			"lchown32".into(),
+		],
+		clock: vec![
+			"adjtimex".into(),
+			"clock_adjtime".into(),
+			"clock_adjtime64".into(),
+			"clock_settime".into(),
+			"clock_settime64".into(),
+			"settimeofday".into(),
 		]
 	};
 
@@ -127,7 +136,7 @@ pub fn compile_syscall_list(
 		syscall_by_names.chown,
 	];
 	let denied_syscall_group: Vec<Vec<String>> = vec![
-
+		syscall_by_names.clock,
 	];
 
 	let mut allowed_syscalls: Vec<libseccomp::ScmpSyscall> = vec![];
@@ -157,10 +166,17 @@ pub fn compile_syscall_list(
 		}
 	}
 
-	Ok(SyscallList{
+	let ret = SyscallList{
 		allow_list: allowed_syscalls,
 		deny_list: denied_syscalls,
-	})
+	};
+
+	crate::logger::log(
+		logtx,
+		crate::logger::Loglevel::Debug,
+		format!("Compiled seccomp allow list and deny list: {ret:#?}"));
+
+	Ok(ret)
 
 }
 
