@@ -99,6 +99,7 @@ pub fn compile_syscall_list(
 		reboot:		Vec<String>,
 		resources:	Vec<String>,
 		swap:		Vec<String>,
+		sync:		Vec<String>,
 	}
 
 	let syscall_by_names = SyscallByNames {
@@ -417,6 +418,15 @@ pub fn compile_syscall_list(
 			"swapon".into(),
 			"swapoff".into(),
 		],
+		sync: vec![
+			"fdatasync".into(),
+			"fsync".into(),
+			"msync".into(),
+			"sync".into(),
+			"sync_file_range".into(),
+			"sync_file_range2".into(),
+			"syncfs".into(),
+		],
 	};
 
 	let allowed_syscall_group = vec![
@@ -429,6 +439,7 @@ pub fn compile_syscall_list(
 		syscall_by_names.network,
 		syscall_by_names.pkey,
 		syscall_by_names.resources,
+		syscall_by_names.sync,
 	];
 	let denied_syscall_group: Vec<Vec<String>> = vec![
 		syscall_by_names.clock,
