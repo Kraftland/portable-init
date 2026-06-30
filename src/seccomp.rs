@@ -27,18 +27,60 @@ pub struct SyscallList {
 pub fn load_seccomp_filter (
 	config_env: &crate::envs::ConfigOpts,
 	syscall_list: &SyscallList) -> Result<(), SeccompError> {
-	let filter = libseccomp::ScmpFilterContext::new(
-		libseccomp::ScmpAction::Allow,
-	);
 
-	let mut filter = match filter {
-		Ok(res)	=>	res,
-		Err(e)	=>	{
-			return Err(SeccompError::CreateFilterError(e));
-		},
+	let mut filter_result = match config_env.lockdown {
+		true	=>	{
+			let filter = libseccomp::ScmpFilterContext::new(
+				libseccomp::ScmpAction::Notify,
+			);
+			let mut filter = match filter {
+				Ok(val) => val,
+				Err(e) => {
+					return Err(SeccompError::CreateFilterError(e));
+				}
+			};
+			let result = filter.set_act_badarch(
+				libseccomp::ScmpAction::Errno(
+					std::io::Error::new(
+						std::io::ErrorKind::Unsupported,
+						"Architecture unsupported",
+					)
+					.raw_os_error()
+					.unwrap()
+			));
+
+			match result {
+				Ok(_) => {},
+				Err(e) => {
+					return Err(SeccompError::AddRuleError(e));
+				}
+			};
+
+			filter
+		}
+		false	=>	{
+			let filter = libseccomp::ScmpFilterContext::new(
+				libseccomp::ScmpAction::Notify,
+			);
+			let mut filter = match filter {
+				Ok(val) => val,
+				Err(e) => {
+					return Err(SeccompError::CreateFilterError(e));
+				}
+			};
+			let result = filter.set_act_badarch(libseccomp::ScmpAction::Allow);
+			match result {
+				Ok(_) => {},
+				Err(e) => {
+					return Err(SeccompError::AddRuleError(e));
+				}
+			};
+
+			filter
+		}
 	};
 
-	let filter_result = filter.add_arch(
+	let filter_result = filter_result.add_arch(
 		libseccomp::ScmpArch::Native
 	);
 	match filter_result {
@@ -48,22 +90,7 @@ pub fn load_seccomp_filter (
 		},
 	}
 
-	let filter_result = match config_env.lockdown {
-		true	=>	{
-			filter.set_act_badarch(
-				libseccomp::ScmpAction::Errno(
-					std::io::Error::new(
-						std::io::ErrorKind::Unsupported,
-						"Architecture unsupported",
-					)
-						.raw_os_error()
-						.unwrap()
-			))
-		}
-		false	=>	{
-			filter.set_act_badarch(libseccomp::ScmpAction::Allow)
-		}
-	};
+
 	match filter_result {
 		Ok(_)	=>	{},
 		Err(e)	=>	{
