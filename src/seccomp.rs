@@ -102,6 +102,7 @@ pub fn compile_syscall_list(
 		sync:		Vec<String>,
 		process:	Vec<String>,
 		process_notify:	Vec<String>,
+		setuid:		Vec<String>,
 	}
 
 	let syscall_by_names = SyscallByNames {
@@ -455,6 +456,22 @@ pub fn compile_syscall_list(
 			"setns".into(),
 			"execveat".into(),
 		],
+		setuid: vec![
+			"setgid".into(),
+			"setgid32".into(),
+			"setgroups".into(),
+			"setgroups32".into(),
+			"setregid".into(),
+			"setregid32".into(),
+			"setresgid".into(),
+			"setresgid32".into(),
+			"setresuid".into(),
+			"setresuid32".into(),
+			"setreuid".into(),
+			"setreuid32".into(),
+			"setuid".into(),
+			"setuid32".into(),
+		],
 	};
 
 	let allowed_syscall_group = vec![
@@ -478,6 +495,7 @@ pub fn compile_syscall_list(
 		syscall_by_names.raw_io,
 		syscall_by_names.reboot,
 		syscall_by_names.swap,
+		syscall_by_names.setuid,
 	];
 	let debug_syscall_group: Vec<Vec<String>> = vec![
 		syscall_by_names.debug,
