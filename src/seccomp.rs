@@ -291,6 +291,7 @@ pub fn compile_syscall_list(
 		syscall_by_names.chown,
 		syscall_by_names.fs_op,
 		syscall_by_names.io_ev,
+		syscall_by_names.ipc,
 	];
 	let denied_syscall_group: Vec<Vec<String>> = vec![
 		syscall_by_names.clock,
