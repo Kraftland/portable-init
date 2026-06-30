@@ -22,6 +22,7 @@ async fn main() -> std::process::ExitCode {
 				seccomp::SyscallList{
 					allow_list: vec![],
 					deny_list: vec![],
+					debug_list: vec![],
 				}
 			}
 		}
