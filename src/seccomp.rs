@@ -766,6 +766,7 @@ pub fn compile_syscall_list(
 		syscall_by_names.process,
 		syscall_by_names.signal,
 		syscall_by_names.timer,
+		syscall_by_names.other,
 	];
 	let denied_syscall_group: Vec<Vec<String>> = vec![
 		syscall_by_names.clock,
