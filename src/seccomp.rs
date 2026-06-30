@@ -95,6 +95,7 @@ pub fn compile_syscall_list(
 		network:	Vec<String>, // @network-io
 		obsolete:	Vec<String>,
 		pkey:		Vec<String>, // memory protection keys
+		raw_io:		Vec<String>,
 	}
 
 	let syscall_by_names = SyscallByNames {
@@ -380,6 +381,15 @@ pub fn compile_syscall_list(
 			"pkey_free".into(),
 			"pkey_mprotect".into(),
 		],
+		raw_io: vec![
+			"ioperm".into(),
+			"iopl".into(),
+			"pciconfig_iobase".into(),
+			"pciconfig_read".into(),
+			"pciconfig_write".into(),
+			"s390_pci_mmio_read".into(),
+			"s390_pci_mmio_write".into(),
+		],
 	};
 
 	let allowed_syscall_group = vec![
@@ -397,6 +407,7 @@ pub fn compile_syscall_list(
 		syscall_by_names.module,
 		syscall_by_names.obsolete,
 		syscall_by_names.chown,
+		syscall_by_names.raw_io,
 	];
 	let debug_syscall_group: Vec<Vec<String>> = vec![
 		syscall_by_names.debug,
