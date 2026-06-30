@@ -21,7 +21,7 @@ jobs:
       run: sudo apt-get update && sudo apt-get upgrade
 
     - name: Install dependencies
-      run: sudo apt-get install seccomp libseccomp-dev librust-libseccomp-sys-dev -y
+      run: sudo apt-get install libseccomp2 libseccomp-dev librust-libseccomp-sys-dev -y
     
     - name: Build
       run: cargo build --verbose
