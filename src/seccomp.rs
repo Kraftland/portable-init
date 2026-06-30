@@ -746,7 +746,7 @@ fn get_syscall_by_name(
 			crate::logger::log(
 				logtx,
 				crate::logger::Loglevel::Debug,
-				format!("{e:#?}"));
+				format!("Could not resolve syscall from name {name}: {e:#?}"));
 			None
 		}
 	}
