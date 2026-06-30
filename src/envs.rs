@@ -12,10 +12,10 @@ pub enum EnvsError {
 pub struct ConfigOpts {
 	pub lockdown:		bool,
 	pub has_flatpak_info:	bool,
+	pub debugging:		bool,
 }
 
 pub fn get_configurations() -> Result<ConfigOpts, EnvsError> {
-
 	let is_lockdown: bool;
 	let has_flatpak_info: bool;
 
@@ -53,8 +53,20 @@ pub fn get_configurations() -> Result<ConfigOpts, EnvsError> {
 		));
 	}
 
+	let mut is_debugging: bool = false;
+	let debug_env = std::env::var("_portableAllowDebugging");
+	match debug_env {
+		Ok(val) => {
+			if val == "1" {
+				is_debugging = true;
+			}
+		}
+		Err(_) => {}
+	};
+
 	Ok(ConfigOpts {
 		lockdown: is_lockdown,
 		has_flatpak_info: has_flatpak_info,
+		debugging: is_debugging,
 	})
 }
