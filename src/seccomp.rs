@@ -46,20 +46,8 @@ pub fn process_seccomp_unotify (
 		}
 	};
 
-	let raw_eperm_err = std::io::Error::from(
-		std::io::ErrorKind::PermissionDenied,
-	).raw_os_error();
-
-	let raw_eperm_err = match raw_eperm_err {
-		Some(val)	=> val,
-		None	=> {
-			crate::logger::log_sync(
-				&logtx,
-				crate::logger::Loglevel::Fatal,
-				format!("Could not resolve EPERM integer: None"));
-				return;
-		}
-	};
+	// On Linux, this should always be -1
+	let raw_eperm_err = -1;
 
 	loop {
 		let request = libseccomp::ScmpNotifReq::receive(fd);
