@@ -29,6 +29,107 @@ pub struct SyscallList {
 	pub selective: Vec<libseccomp::ScmpSyscall>, // depends on lockdown
 }
 
+pub fn process_seccomp_unotify (
+	fd: libseccomp::ScmpFd,
+	logtx: &tokio::sync::mpsc::Sender<LogMessage>,
+) {
+	let execve_id = libseccomp::ScmpSyscall::from_name("execve");
+	let execve_id = match execve_id {
+		Ok(val) => val,
+		Err(e)	=> {
+			crate::logger::log(
+				&logtx,
+				crate::logger::Loglevel::Fatal,
+				format!("Could not resolve execve syscall ID: {e:#?}"));
+				return;
+		}
+	};
+
+	let raw_eperm_err = std::io::Error::from(
+		std::io::ErrorKind::PermissionDenied,
+	).raw_os_error();
+
+	let raw_eperm_err = match raw_eperm_err {
+		Some(val)	=> val,
+		None	=> {
+			crate::logger::log(
+				&logtx,
+				crate::logger::Loglevel::Fatal,
+				format!("Could not resolve EPERM integer: None"));
+				return;
+		}
+	};
+
+	loop {
+		let request = libseccomp::ScmpNotifReq::receive(fd);
+		let request = match request {
+			Ok(val)	=> val,
+			Err(e)	=> {
+				crate::logger::log(
+					&logtx,
+					crate::logger::Loglevel::Fatal,
+					format!("Could not receive seccomp notification: {e:#?}"));
+				return
+			}
+		};
+		if request.data.syscall == execve_id {
+			// TODO: filter execve
+			let response = libseccomp::ScmpNotifResp::new_continue(
+				request.id,
+				libseccomp::ScmpNotifRespFlags::empty(),
+			);
+			match response.respond(fd) {
+				Ok(_)	=> {},
+				Err(e)	=> {
+					crate::logger::log(
+						&logtx,
+						crate::logger::Loglevel::Warn,
+						format!(
+							"Error filtering syscall: {e:#?}",
+						),
+					);
+				},
+			}
+			continue;
+		}
+
+		let syscall_name = request.data.syscall.get_name();
+		let syscall_name = match syscall_name {
+			Ok(val)	=> val,
+			Err(e)	=> {
+				format!("unresolved syscall ({:#?})", e)
+			}
+		};
+		crate::logger::log(
+			&logtx,
+			crate::logger::Loglevel::Warn,
+			format!(
+				"PID {} performed illegal system call {}",
+				request.id,
+				syscall_name,
+			),
+		);
+
+		let response = libseccomp::ScmpNotifResp::new_error(
+			request.id,
+			raw_eperm_err,
+			libseccomp::ScmpNotifRespFlags::empty(),
+		);
+		match response.respond(fd) {
+			Ok(_)	=> {},
+			Err(e)	=> {
+				crate::logger::log(
+					&logtx,
+					crate::logger::Loglevel::Warn,
+					format!(
+						"Error filtering syscall: {e:#?}",
+					),
+				);
+			},
+		}
+	}
+}
+
 // Loads a Secure Computing filter
 pub fn load_seccomp_filter (
 	config_env: &crate::envs::ConfigOpts,
