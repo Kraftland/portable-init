@@ -723,10 +723,6 @@ pub fn compile_syscall_list(
 	crate::logger::log(
 		logtx,
 		crate::logger::Loglevel::Debug,
-		//format!("Compiled seccomp allow list and deny list: {ret:#?}"));
-	crate::logger::log(
-		logtx,
-		crate::logger::Loglevel::Debug,
 		format!(
 			"{} allowed syscalls, {} denied syscalls, {} debug syscalls and {} lockdown syscalls",
 			ret.allow_list.len(),
