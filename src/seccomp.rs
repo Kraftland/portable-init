@@ -90,6 +90,7 @@ pub fn compile_syscall_list(
 		ipc:		Vec<String>,
 		keyring:	Vec<String>,
 		memlock:	Vec<String>,
+		module:		Vec<String>,
 	}
 
 	let syscall_by_names = SyscallByNames {
@@ -299,6 +300,11 @@ pub fn compile_syscall_list(
 			"munlock".into(),
 			"munlockall".into(),
 		],
+		module: vec![
+			"delete_module".into(),
+			"finit_module".into(),
+			"init_module".into(),
+		]
 	};
 
 	let allowed_syscall_group = vec![
@@ -312,6 +318,7 @@ pub fn compile_syscall_list(
 	];
 	let denied_syscall_group: Vec<Vec<String>> = vec![
 		syscall_by_names.clock,
+		syscall_by_names.module,
 	];
 	let debug_syscall_group: Vec<Vec<String>> = vec![
 		syscall_by_names.debug,
