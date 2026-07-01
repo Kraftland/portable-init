@@ -12,6 +12,7 @@ async fn main() -> std::process::ExitCode {
 
 
 	let (tx, rx) = mpsc::channel::<logger::LogMessage>(128);
+	let _ = tokio::spawn(logger::logg_worker(rx));
 
 	let config_opts = envs::get_configurations();
 	let config_opts = match config_opts {
@@ -111,7 +112,13 @@ async fn main() -> std::process::ExitCode {
 		}
 	);
 
-	let _ = tokio::spawn(logger::logg_worker(rx));
+	let counter_info = counter::Counter::new();
+	let tx_clone = tx.clone();
+	let _ = tokio::spawn(
+		async move {
+			counter::Counter::start(counter_info.receive_channel, &tx_clone).await;
+		},
+	);
 
 	logger::log(&tx, logger::Loglevel::Debug, "Hello, World".to_string()).await;
 	std::thread::sleep(std::time::Duration::from_secs(5));

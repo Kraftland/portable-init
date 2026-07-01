@@ -1,8 +1,8 @@
 // use thiserror::Error;
 
 pub struct Counter {
-	send_channel: tokio::sync::mpsc::Sender<CounterMessage>,
-	receive_channel: tokio::sync::mpsc::Receiver<CounterMessage>,
+	pub send_channel: tokio::sync::mpsc::Sender<CounterMessage>,
+	pub receive_channel: tokio::sync::mpsc::Receiver<CounterMessage>,
 }
 
 pub enum CounterMessage {
@@ -12,7 +12,7 @@ pub enum CounterMessage {
 
 impl Counter {
 	pub fn new () -> Self {
-		let (tx, mut rx) = tokio::sync::mpsc::channel::<CounterMessage>(16);
+		let (tx, rx) = tokio::sync::mpsc::channel::<CounterMessage>(16);
 		Self { send_channel: tx , receive_channel: rx }
 	}
 	pub async fn start (
