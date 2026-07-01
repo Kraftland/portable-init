@@ -21,7 +21,7 @@ jobs:
     - uses: actions/checkout@v6
 
     - name: Update repos
-      run: pacman -Syu --needed --noconfirm libseccomp rust
+      run: pacman -Syu --needed --noconfirm libseccomp rust systemd-libs
 
     - name: Build
       run: cargo build --verbose
