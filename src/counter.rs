@@ -30,5 +30,49 @@ impl Counter {
 				return;
 			}
 		};
+		let mut count: u128 = 0;
+		loop {
+			let msg = receive_chan.recv().await;
+			let msg = match msg {
+				Some(val)	=> val,
+				None		=> continue,
+			};
+			match msg {
+				CounterMessage::ProcessStarted	=> {
+					count += 1;
+				}
+				CounterMessage::ProcessDied	=> {
+					count -= 1;
+				}
+			}
+			if count == 0 {
+				// TODO: implement stopping logic here
+				let _ = systemd::daemon::notify(
+					false,
+					vec![(systemd::daemon::STATE_STOPPING, "1")].iter(),
+				);
+				return
+			}
+			let result = systemd::daemon::notify(
+				false,
+				vec![
+					(
+						systemd::daemon::STATE_STATUS,
+						format!("Tracked PID count: {count}").as_str(),
+					)
+				].iter(),
+			);
+			match result {
+				Ok(_)	=> {}
+				Err(e)	=> {
+					crate::logger::log(
+						&logtx,
+						crate::logger::Loglevel::Warn,
+						format!("Could not set unit status: {e:#?}"),
+					)
+					.await;
+				}
+			};
+		}
 	}
 }
