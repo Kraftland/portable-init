@@ -112,7 +112,7 @@ pub fn load_landlock (conf: &crate::envs::ConfigOpts) -> Result<(), LandlockErro
 
 	let rule_set = landlock::Ruleset::default()
 		.handle_access(
-			LandlockFsAccess::Empty.rule(),
+			LandlockFsAccess::Full.rule(),
 		);
 	let rule = match rule_set {
 		Ok(val)	=> val,
