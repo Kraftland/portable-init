@@ -5,9 +5,11 @@ mod envs;
 mod landlock;
 mod uclamp;
 mod spawn;
+mod counter;
 
 #[tokio::main]
 async fn main() -> std::process::ExitCode {
+
 
 	let (tx, rx) = mpsc::channel::<logger::LogMessage>(128);
 
