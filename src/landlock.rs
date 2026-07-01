@@ -22,10 +22,10 @@ pub enum LandlockError {
 }
 
 struct DefinedRules {
-	RO:		Vec<String>,
-	RW:		Vec<String>,
-	Full:		Vec<String>,
-	ReadDir:	Vec<String>,
+	ro:		Vec<String>,
+	rw:		Vec<String>,
+	full:		Vec<String>,
+	read_dir:	Vec<String>,
 }
 
 impl DefinedRules {
@@ -39,7 +39,7 @@ impl DefinedRules {
 		};
 
 		let mut ret = DefinedRules {
-			RO: vec![
+			ro: vec![
 				"/bin".into(),
 				"/sys/fs/cgroup".into(),
 				"/etc".into(),
@@ -49,22 +49,22 @@ impl DefinedRules {
 				"/sbin".into(),
 				"/usr".into(),
 			],
-			RW: vec![
+			rw: vec![
 				home.to_string_lossy().to_string(),
 				"/run".into(),
 				"/tmp".into(),
 			],
-			Full: vec![
+			full: vec![
 				"/dev".into(),
 				"/proc".into(),
 				"/sys".into(),
 			],
-			ReadDir: vec![
+			read_dir: vec![
 				"/".into(),
 			],
 		};
 		if *has_flatpak_info == true {
-			ret.RO.push("/.flatpak-info".into());
+			ret.ro.push("/.flatpak-info".into());
 		}
 		Ok(ret)
 	}
@@ -127,7 +127,7 @@ pub fn load_landlock (conf: &crate::envs::ConfigOpts) -> Result<(), LandlockErro
 
 	let result = rule_set.add_rules(
 		landlock::path_beneath_rules(
-			defined_rules.RO,
+			defined_rules.ro,
 			LandlockFsAccess::DirectoryRO.rule(),
 		),
 	);
@@ -140,7 +140,7 @@ pub fn load_landlock (conf: &crate::envs::ConfigOpts) -> Result<(), LandlockErro
 
 	let result = rule_set.add_rules(
 		landlock::path_beneath_rules(
-			defined_rules.RW,
+			defined_rules.rw,
 			LandlockFsAccess::Directory.rule(),
 		),
 	);
@@ -153,7 +153,7 @@ pub fn load_landlock (conf: &crate::envs::ConfigOpts) -> Result<(), LandlockErro
 
 	let result = rule_set.add_rules(
 		landlock::path_beneath_rules(
-			defined_rules.Full,
+			defined_rules.full,
 			LandlockFsAccess::Full.rule(),
 		),
 	);
@@ -166,7 +166,7 @@ pub fn load_landlock (conf: &crate::envs::ConfigOpts) -> Result<(), LandlockErro
 
 	let result = rule_set.add_rules(
 		landlock::path_beneath_rules(
-			defined_rules.ReadDir,
+			defined_rules.read_dir,
 			landlock::make_bitflags!(AccessFs::ReadDir),
 		),
 	);
