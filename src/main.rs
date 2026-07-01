@@ -4,6 +4,7 @@ mod seccomp;
 mod envs;
 mod landlock;
 mod uclamp;
+mod spawn;
 
 #[tokio::main]
 async fn main() -> std::process::ExitCode {
