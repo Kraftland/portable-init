@@ -9,9 +9,24 @@ mod counter;
 
 #[tokio::main]
 async fn main() -> std::process::ExitCode {
-
-
 	let (tx, rx) = mpsc::channel::<logger::LogMessage>(128);
+	let tx_clone = tx.clone();
+	let bus_spawn = tokio::spawn(async move {
+		let result = zbus::Connection::session().await;
+		match result {
+			Ok(val)	=> Some(val),
+			Err(e)	=> {
+				crate::logger::log_sync(
+					&tx_clone,
+					crate::logger::Loglevel::Fatal,
+					format!("Could not connect to session bus: {e:#?}"),
+				);
+				return None;
+			},
+		}
+	});
+
+
 	let _ = tokio::spawn(logger::logg_worker(rx));
 
 	let config_opts = envs::get_configurations();
