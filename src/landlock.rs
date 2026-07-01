@@ -176,6 +176,8 @@ pub fn load_landlock (conf: &crate::envs::ConfigOpts) -> Result<(), LandlockErro
 		}
 	};
 
+	let _scope = landlock::Scope::from(landlock::Scope::Signal);
+
 	let status = rule_set.restrict_self();
 	let status = match status {
 		Ok(val)	=> val,
