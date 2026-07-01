@@ -8,7 +8,7 @@ pub enum EnvsError {
 	NonUnicodeError(std::env::VarError)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ConfigOpts {
 	pub lockdown:		bool,
 	pub has_flatpak_info:	bool,

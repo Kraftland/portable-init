@@ -19,6 +19,7 @@ async fn main() -> std::process::ExitCode {
 	};
 
 	let tx_clone_compile_syscall = tx.clone();
+	let conf_clone = config_opts.clone();
 	let seccomp_result = tokio::spawn(async move {
 		let result = seccomp::compile_syscall_list(&tx_clone_compile_syscall);
 		let list = match result {
@@ -32,7 +33,7 @@ async fn main() -> std::process::ExitCode {
 				return
 			}
 		};
-		let result = seccomp::load_seccomp_filter(&config_opts, &list);
+		let result = seccomp::load_seccomp_filter(&conf_clone, &list);
 		let fd = match result {
 			Ok(fd) => fd,
 			Err(e) => {
@@ -59,6 +60,35 @@ async fn main() -> std::process::ExitCode {
 		);
 	});
 
+	let tx_landlock_clone = tx.clone();
+	let conf_clone = config_opts.clone();
+	let landlock_spawn = tokio::spawn(
+		async move {
+			let raw_env = std::env::var("_portableEnableLandlock");
+			match raw_env {
+				Ok(_)	=> {}
+				Err(_)	=> {return}
+			}
+			let result = landlock::load_landlock(&conf_clone);
+			match result {
+				Ok(()) => {
+					logger::log(
+						&tx_landlock_clone,
+						logger::Loglevel::Debug,
+						format!("Loaded landlock rules"),
+					).await;
+				}
+				Err(e) => {
+					logger::log(
+						&tx_landlock_clone,
+						logger::Loglevel::Fatal,
+						format!("Could not load landlock: {e:#?}"),
+					).await;
+				}
+			}
+		}
+	);
+
 	let _ = tokio::spawn(logger::logg_worker(rx));
 
 	logger::log(&tx, logger::Loglevel::Debug, "Hello, World".to_string()).await;
@@ -73,6 +103,16 @@ async fn main() -> std::process::ExitCode {
 				&tx,
 				logger::Loglevel::Fatal,
 				format!("Could not dispatch seccomp thread: {e:#?}"),
+			).await;
+		}
+	};
+	match landlock_spawn.await {
+		Ok(())	=> {}
+		Err(e)	=> {
+			logger::log(
+				&tx,
+				logger::Loglevel::Fatal,
+				format!("Could not dispatch landlock thread: {e:#?}"),
 			).await;
 		}
 	};
