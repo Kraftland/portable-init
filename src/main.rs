@@ -3,6 +3,7 @@ use tokio::sync::mpsc;
 mod seccomp;
 mod envs;
 mod landlock;
+mod uclamp;
 
 #[tokio::main]
 async fn main() -> std::process::ExitCode {
