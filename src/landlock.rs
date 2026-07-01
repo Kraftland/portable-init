@@ -81,7 +81,6 @@ pub fn load_landlock (conf: &crate::envs::ConfigOpts) -> Result<(), LandlockErro
 		Full,
 		Directory, // Does not include MakeChar, MakeBlock, IoctlDev
 		DirectoryRO,
-		Empty,
 	}
 	impl LandlockFsAccess {
 		fn rule(self: &Self) -> landlock::BitFlags<AccessFs> {
@@ -102,9 +101,6 @@ pub fn load_landlock (conf: &crate::envs::ConfigOpts) -> Result<(), LandlockErro
 							ReadFile
 						}
 					)
-				},
-				Self::Empty => {
-					landlock::BitFlags::<AccessFs>::empty()
 				}
 			}
 		}
