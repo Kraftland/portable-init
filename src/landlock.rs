@@ -4,8 +4,11 @@ use landlock::{
 	AccessFs,
 	Compatible,
 	CompatLevel,
+	Access,
 	RulesetCreatedAttr,
 };
+
+const ABI: landlock::ABI = landlock::ABI::V6;
 
 #[derive(Debug, Error)]
 pub enum LandlockError {
@@ -83,9 +86,9 @@ pub fn load_landlock (conf: &crate::envs::ConfigOpts) -> Result<(), LandlockErro
 	impl LandlockFsAccess {
 		fn rule(self: &Self) -> landlock::BitFlags<AccessFs> {
 			match self {
-				Self::Full => landlock::BitFlags::<AccessFs>::all(),
+				Self::Full => AccessFs::from_all(ABI),
 				Self::Directory => {
-					let mut rule = landlock::BitFlags::<AccessFs>::all();
+					let mut rule = AccessFs::from_all(ABI);
 					rule.remove(AccessFs::MakeChar);
 					rule.remove(AccessFs::MakeBlock);
 					rule.remove(AccessFs::IoctlDev);
