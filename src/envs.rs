@@ -4,6 +4,10 @@ use thiserror::Error;
 pub enum EnvsError {
 	#[error("Unrecognised {0:?} environment {1:?}")]
 	InvalidEnvError(String, String),
+
+	#[error("Failed to get sandbox ID: {0:?}")]
+	AppIDError(std::env::VarError),
+
 	#[error("Malformed environment variable: {0:?}")]
 	NonUnicodeError(std::env::VarError)
 }
@@ -13,11 +17,21 @@ pub struct ConfigOpts {
 	pub lockdown:		bool,
 	pub has_flatpak_info:	bool,
 	pub debugging:		bool,
+	pub sandbox_id:		String,
 }
 
 pub fn get_configurations() -> Result<ConfigOpts, EnvsError> {
 	let is_lockdown: bool;
 	let has_info: bool;
+
+	let app_id: String;
+
+	match std::env::var("appID") {
+		Ok(val)	=> {app_id = val}
+		Err(e)	=> {
+			return Err(EnvsError::AppIDError(e));
+		}
+	}
 
 	let info_env = std::env::var("_portableHasFlatpakInfo");
 	match info_env {
@@ -90,5 +104,6 @@ pub fn get_configurations() -> Result<ConfigOpts, EnvsError> {
 		lockdown: is_lockdown,
 		has_flatpak_info: has_info,
 		debugging: is_debugging,
+		sandbox_id: app_id,
 	})
 }

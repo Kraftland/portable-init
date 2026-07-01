@@ -11,7 +11,7 @@ mod counter;
 async fn main() -> std::process::ExitCode {
 	let (tx, rx) = mpsc::channel::<logger::LogMessage>(128);
 	let tx_clone = tx.clone();
-	let bus_spawn = tokio::spawn(async move {
+	let bus_connect_result = tokio::spawn(async move {
 		let result = zbus::Connection::session().await;
 		match result {
 			Ok(val)	=> Some(val),
