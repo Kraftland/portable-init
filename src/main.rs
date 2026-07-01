@@ -68,7 +68,7 @@ async fn main() -> std::process::ExitCode {
 			match raw_env {
 				Ok(_)	=> {}
 				Err(_)	=> {return}
-			}
+			};
 			let result = landlock::load_landlock(&conf_clone);
 			match result {
 				Ok(()) => {
