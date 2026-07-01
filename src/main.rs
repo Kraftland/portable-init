@@ -65,6 +65,24 @@ async fn main() -> std::process::ExitCode {
 	let conf_clone = config_opts.clone();
 	let landlock_spawn = tokio::spawn(
 		async move {
+			let result = uclamp::apply_uclamp();
+			match result {
+				Ok(val)	=> {
+					logger::log(
+						&tx_landlock_clone,
+						logger::Loglevel::Warn,
+						format!("Successfully set uclamp.max to: {val:?}"),
+					).await;
+				}
+				Err(e)	=> {
+					logger::log(
+						&tx_landlock_clone,
+						logger::Loglevel::Warn,
+						format!("Could not set uclamp limits: {e:#?}"),
+					).await;
+				}
+			}
+
 			let raw_env = std::env::var("_portableEnableLandlock");
 			match raw_env {
 				Ok(_)	=> {}
