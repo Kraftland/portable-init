@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-const InitAPIVer: u32 = 3;
+const INIT_APIVER: u32 = 18;
 
 struct Init;
 
@@ -34,6 +34,13 @@ impl Init {
 		directory: bool
 	) {
 		// TODO: wire Portal request here
+	}
+
+	#[zbus(
+		property
+	)]
+	async fn version (&self) -> u32 {
+		INIT_APIVER
 	}
 }
 
