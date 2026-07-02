@@ -15,17 +15,22 @@ async fn main() -> std::process::ExitCode {
 
 	let tx_clone = tx.clone();
 	let bus_connect_result = tokio::spawn(async move {
-		let result = zbus::Connection::session().await;
+		let result = zbus::connection::Builder::session();
 		match result {
 			Ok(val)	=> {
+				logger::log(
+					&tx_clone,
+					logger::Loglevel::Debug,
+					format!("Connected to session bus"),
+				).await;
 				Some(val)
 			},
 			Err(e)	=> {
-				crate::logger::log_sync(
+				crate::logger::log(
 					&tx_clone,
 					crate::logger::Loglevel::Fatal,
 					format!("Could not connect to session bus: {e:#?}"),
-				);
+				).await;
 				return None;
 			},
 		}
