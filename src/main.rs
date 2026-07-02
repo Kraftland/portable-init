@@ -175,6 +175,8 @@ async fn main() -> std::process::ExitCode {
 
 	// TODO: start process
 
+	task_tracker.close();
+
 	tokio::select! {
 		_ = cancel_token.cancelled()	=> {
 			println!("Shutting down on cancel...");
