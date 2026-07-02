@@ -22,6 +22,9 @@ pub struct ConfigOpts {
 	pub has_flatpak_info:	bool,
 	pub debugging:		bool,
 	pub sandbox_id:		String,
+
+	// Origin -> dest
+	pub file_map:		std::collections::HashMap<String, String>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -57,7 +60,10 @@ fn get_pass_files_env() -> Result<PassFiles, EnvsError> {
 }
 
 pub fn get_configurations() -> Result<ConfigOpts, EnvsError> {
-
+	let passed_files = match get_pass_files_env() {
+		Ok(val)	=>	val,
+		Err(e)	=>	return Err(e),
+	};
 
 
 	let is_lockdown: bool;
