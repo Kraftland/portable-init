@@ -1,4 +1,5 @@
 use thiserror::Error;
+use serde::{Deserialize,Serialize};
 
 #[derive(Error, Debug)]
 pub enum EnvsError {
@@ -9,7 +10,10 @@ pub enum EnvsError {
 	AppIDError(std::env::VarError),
 
 	#[error("Malformed environment variable: {0:?}")]
-	NonUnicodeError(std::env::VarError)
+	NonUnicodeError(std::env::VarError),
+
+	#[error("Failed to decode _portableHelperExtraFiles: {0:#?}: {1:#?}")]
+	PassFilesError(String, serde_json::Error),
 }
 
 #[derive(Debug, Clone)]
@@ -20,7 +24,42 @@ pub struct ConfigOpts {
 	pub sandbox_id:		String,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+struct PassFiles {
+	file_map:		std::collections::HashMap<String, String>
+}
+
+fn get_pass_files_env() -> Result<PassFiles, EnvsError> {
+	let files_json = std::env::var("_portableHelperExtraFiles");
+	let files_map: std::collections::HashMap<String,String> = std::collections::HashMap::new();
+	let files_json = match files_json {
+		Ok(val)	=> val,
+		Err(e)	=> {
+			if e == std::env::VarError::NotPresent {
+				return Ok(
+					PassFiles {
+						file_map: files_map,
+					},
+				)
+			} else {
+				return Err(EnvsError::NonUnicodeError(e));
+			}
+		}
+	};
+	let deserialised: Result<PassFiles, serde_json::Error> = serde_json::from_str(&files_json);
+	match deserialised {
+		Ok(val)	=> Ok(val),
+		Err(e)	=> {
+			Err(EnvsError::PassFilesError(files_json, e))
+		}
+	}
+}
+
 pub fn get_configurations() -> Result<ConfigOpts, EnvsError> {
+
+
+
 	let is_lockdown: bool;
 	let has_info: bool;
 
