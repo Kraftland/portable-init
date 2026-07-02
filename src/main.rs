@@ -70,6 +70,7 @@ async fn main() -> std::process::ExitCode {
 
 	let tx_clone = tx.clone();
 	let conf_clone = config_opts.clone();
+	//let cancel_token_clone = cancel_token.clone();
 	let bus_connect_result = tokio::spawn(async move {
 		let result = ipc::IPC::connect(&conf_clone).await;
 		match result {
@@ -79,7 +80,7 @@ async fn main() -> std::process::ExitCode {
 					logger::Loglevel::Debug,
 					format!("Connected to session bus"),
 				).await;
-				Some(val)
+				val
 			},
 			Err(e)	=> {
 				crate::logger::log(
@@ -87,7 +88,8 @@ async fn main() -> std::process::ExitCode {
 					crate::logger::Loglevel::Fatal,
 					format!("Could not connect to session bus: {e:#?}"),
 				).await;
-				return None;
+				std::thread::sleep(std::time::Duration::from_secs(5));
+				panic!("{e:#?}");
 			},
 		}
 	});
@@ -173,6 +175,19 @@ async fn main() -> std::process::ExitCode {
 		}
 	};
 
+	let ipc_object = match bus_connect_result.await {
+		Ok(val)	=>	val,
+		Err(e)	=>	{
+			logger::log(
+				&tx,
+				logger::Loglevel::Fatal,
+				format!("Could not connect to Session Bus: {e:#?}")
+			).await;
+			std::thread::sleep(std::time::Duration::from_secs(5));
+			return std::process::ExitCode::FAILURE;
+		}
+	};
+
 	println!("Starting process...");
 
 	// TODO: start process
@@ -189,7 +204,7 @@ async fn main() -> std::process::ExitCode {
 		},
 	};
 
-
+	tokio::spawn(ipc_object.graceful_shutdown());
 
 	task_tracker.wait().await;
 
