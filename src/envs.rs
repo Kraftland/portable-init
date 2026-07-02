@@ -24,7 +24,9 @@ pub struct ConfigOpts {
 	pub sandbox_id:		String,
 
 	// Origin -> dest
-	pub file_map:		std::collections::HashMap<String, String>
+	pub file_map:		std::collections::HashMap<String, String>,
+
+	pub inhibit:		bool,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -65,6 +67,24 @@ pub fn get_configurations() -> Result<ConfigOpts, EnvsError> {
 		Err(e)	=>	return Err(e),
 	};
 
+	let has_inhibit = match std::env::var("_portableInhibit") {
+		Ok(val)	=> {
+			if val == "1" {
+				true
+			} else {
+				false
+			}
+		},
+		Err(e)	=> {
+			if e == std::env::VarError::NotPresent {
+				false
+			} else {
+				return Err(
+					EnvsError::NonUnicodeError(e),
+				);
+			}
+		}
+	};
 
 	let is_lockdown: bool;
 	let has_info: bool;
@@ -151,5 +171,6 @@ pub fn get_configurations() -> Result<ConfigOpts, EnvsError> {
 		debugging: is_debugging,
 		sandbox_id: app_id,
 		file_map: passed_files.file_map,
+		inhibit: has_inhibit,
 	})
 }
