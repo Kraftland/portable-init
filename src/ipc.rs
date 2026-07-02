@@ -1,19 +1,19 @@
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-enum BusError {
+pub enum BusError {
 	#[error("Failed connecting to session bus: {0:#?}")]
 	ConnectError(zbus::Error)
 }
 
 
 
-struct IPC {
+pub struct IPC {
 	connection: zbus::Connection
 }
 
 impl IPC {
-	async fn connect(conf: &crate::envs::ConfigOpts) -> Result<zbus::Connection, BusError> {
+	pub async fn connect(conf: &crate::envs::ConfigOpts) -> Result<zbus::Connection, BusError> {
 		let conn = zbus::connection::Builder::session();
 		let conn = match conn {
 			Ok(val)	=> val,
