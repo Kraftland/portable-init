@@ -19,11 +19,18 @@ impl Init {
 		target_exec: Vec<String>,
 		arguments: Vec<String>,
 		extra_files: std::collections::HashMap<String, String>,
-		) -> zbus::fdo::Result<(bool, String)> {
+	) -> zbus::fdo::Result<(bool, String)> {
 
-			// TODO: replace stub
-			Ok((false, "".into()))
-		}
+		// TODO: replace stub
+		Ok((false, "".into()))
+	}
+
+	async fn request_file_system_access (
+		&self,
+		directory: bool
+	) {
+		// TODO: wire Portal request here
+	}
 }
 
 #[derive(Debug, Error)]
@@ -91,22 +98,22 @@ impl IPC {
 
 		let daemon_name = format!("top.kimiblock.portable.{}", conf.sandbox_id);
 
-		match conn.build().await {
-			Ok(val)	=> {
-				let server = val.object_server()
-					.at(
-						"/top/kimiblock/portable/init",
-						Init,
-					).await;
-				match server {
-					Ok(_)	=> {}
-					Err(e)	=> {
-						return Err(BusError::ConnectError(e))
-					}
-				}
+		let conn = match conn.build().await {
+			Ok(val)	=> val,
+			Err(e)	=> return Err(BusError::ConnectError(e))
+		};
+
+		let result = conn.object_server()
+			.at(
+				"/top/kimiblock/portable/init",
+				Init,
+			).await;
+
+		match result {
+			Ok(_)	=> {
 				Ok(
 					Self {
-						connection: val,
+						connection: conn,
 						daemon_bus_name: daemon_name,
 					},
 				)
