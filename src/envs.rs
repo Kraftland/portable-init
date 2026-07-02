@@ -150,5 +150,6 @@ pub fn get_configurations() -> Result<ConfigOpts, EnvsError> {
 		has_flatpak_info: has_info,
 		debugging: is_debugging,
 		sandbox_id: app_id,
+		file_map: passed_files.file_map,
 	})
 }
