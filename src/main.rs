@@ -177,14 +177,10 @@ async fn main() -> std::process::ExitCode {
 
 	tokio::select! {
 		_ = cancel_token.cancelled()	=> {
-			println!("Shutting down on cancel");
+			println!("Shutting down on cancel...");
 		},
 		_ = tokio::signal::ctrl_c()	=> {
-			logger::log(
-				&tx,
-				logger::Loglevel::Warn,
-				format!("Shutting on SIGINT..."),
-			).await;
+			println!("Shutting down on SIGINT...");
 			cancel_token.cancel();
 		},
 	};
