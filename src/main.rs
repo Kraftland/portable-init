@@ -6,35 +6,13 @@ mod landlock;
 mod uclamp;
 mod spawn;
 mod counter;
+mod ipc;
 
 #[tokio::main]
 async fn main() -> std::process::ExitCode {
 	let (tx, rx) = mpsc::channel::<logger::LogMessage>(128);
 	let cancel_token = tokio_util::sync::CancellationToken::new();
 	let task_tracker = tokio_util::task::TaskTracker::new();
-
-	let tx_clone = tx.clone();
-	let bus_connect_result = tokio::spawn(async move {
-		let result = zbus::connection::Builder::session();
-		match result {
-			Ok(val)	=> {
-				logger::log(
-					&tx_clone,
-					logger::Loglevel::Debug,
-					format!("Connected to session bus"),
-				).await;
-				Some(val)
-			},
-			Err(e)	=> {
-				crate::logger::log(
-					&tx_clone,
-					crate::logger::Loglevel::Fatal,
-					format!("Could not connect to session bus: {e:#?}"),
-				).await;
-				return None;
-			},
-		}
-	});
 
 	let cancel_token_clone = cancel_token.clone();
 	let _ = tokio::spawn(logger::logg_worker(rx, cancel_token_clone));
@@ -88,6 +66,32 @@ async fn main() -> std::process::ExitCode {
 				seccomp::process_seccomp_unotify(fd, &tx_clone);
 			}
 		);
+	});
+
+	let tx_clone = tx.clone();
+	let conf_clone = config_opts.clone();
+	//let cancel_token_clone = cancel_token.clone();
+	let bus_connect_result = tokio::spawn(async move {
+		let result = ipc::IPC::connect(&conf_clone).await;
+		match result {
+			Ok(val)	=> {
+				logger::log(
+					&tx_clone,
+					logger::Loglevel::Debug,
+					format!("Connected to session bus"),
+				).await;
+				val
+			},
+			Err(e)	=> {
+				crate::logger::log(
+					&tx_clone,
+					crate::logger::Loglevel::Fatal,
+					format!("Could not connect to session bus: {e:#?}"),
+				).await;
+				std::thread::sleep(std::time::Duration::from_secs(5));
+				panic!("{e:#?}");
+			},
+		}
 	});
 
 	let tx_landlock_clone = tx.clone();
@@ -171,6 +175,19 @@ async fn main() -> std::process::ExitCode {
 		}
 	};
 
+	let ipc_object = match bus_connect_result.await {
+		Ok(val)	=>	val,
+		Err(e)	=>	{
+			logger::log(
+				&tx,
+				logger::Loglevel::Fatal,
+				format!("Could not connect to Session Bus: {e:#?}")
+			).await;
+			std::thread::sleep(std::time::Duration::from_secs(5));
+			return std::process::ExitCode::FAILURE;
+		}
+	};
+
 	println!("Starting process...");
 
 	// TODO: start process
@@ -187,9 +204,10 @@ async fn main() -> std::process::ExitCode {
 		},
 	};
 
-
-
 	task_tracker.wait().await;
+
+	ipc_object.request_shutdown().await.unwrap();
+	tokio::spawn(ipc_object.graceful_shutdown());
 
 	return std::process::ExitCode::SUCCESS
 }
