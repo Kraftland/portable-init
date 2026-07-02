@@ -1,5 +1,6 @@
 use thiserror::Error;
 
+const InitAPIVer: u32 = 3;
 
 struct Init;
 
@@ -25,6 +26,9 @@ impl Init {
 		Ok((false, "".into()))
 	}
 
+	#[zbus(
+		name = "RequestFSAccess",
+	)]
 	async fn request_file_system_access (
 		&self,
 		directory: bool
