@@ -1,5 +1,30 @@
 use thiserror::Error;
-use zbus::proxy;
+
+
+struct Init {}
+
+#[zbus::interface(
+	name = "top.kimiblock.Portable.Init",
+	introspection_docs = true,
+)]
+impl Init {
+	#[zbus(
+		name = "AuxStart",
+		out_args("is_stream", "base_directory")
+	)]
+	async fn request_start (
+		&self,
+		custom_target: bool,
+		tray_activate: bool,
+		target_exec: Vec<String>,
+		arguments: Vec<String>,
+		extra_files: std::collections::HashMap<String, String>,
+		) -> zbus::fdo::Result<(bool, String)> {
+
+			// TODO: replace stub
+			Ok((false, "".into()))
+		}
+}
 
 #[derive(Debug, Error)]
 pub enum BusError {
