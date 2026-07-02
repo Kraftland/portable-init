@@ -61,6 +61,7 @@ pub async fn logg_worker(
 						"\x1b[38;2;255;0;0m[Init]\x1b[0m: {}",
 						request.message,
 					);
+					cancel_token.cancel();
 					std::process::exit(1)
 				}
 		}
