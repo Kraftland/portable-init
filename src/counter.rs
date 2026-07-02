@@ -16,8 +16,9 @@ impl Counter {
 		Self { send_channel: tx , receive_channel: rx }
 	}
 	pub async fn start (
-		mut receive_chan: tokio::sync::mpsc::Receiver<CounterMessage>,
-		logtx: &tokio::sync::mpsc::Sender<crate::logger::LogMessage>,
+			mut receive_chan: tokio::sync::mpsc::Receiver<CounterMessage>,
+			logtx: &tokio::sync::mpsc::Sender<crate::logger::LogMessage>,
+			cancel_token: tokio_util::sync::CancellationToken,
 		) {
 		let startup_result = systemd::daemon::notify(false, vec![("READY", "1")].iter());
 		match startup_result {
@@ -32,7 +33,10 @@ impl Counter {
 		};
 		let mut count: u128 = 0;
 		loop {
-			let msg = receive_chan.recv().await;
+			let msg = tokio::select! {
+				val = receive_chan.recv() => {val}
+				_ = cancel_token.cancelled() => {return}
+			};
 			let msg = match msg {
 				Some(val)	=> val,
 				None		=> continue,
