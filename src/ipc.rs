@@ -55,8 +55,7 @@ impl IPC {
 			Err(e)	=> return Err(BusError::ConnectError(e))
 		};
 
-		let mut bus_name = String::from("top.kimiblock.portable.");
-		bus_name.push_str(&conf.sandbox_id);
+		let bus_name = format!("{}.Portable.Helper", conf.sandbox_id);
 
 		let conn = match conn.name(bus_name) {
 			Ok(val)	=> val,
