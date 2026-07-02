@@ -6,35 +6,13 @@ mod landlock;
 mod uclamp;
 mod spawn;
 mod counter;
+mod ipc;
 
 #[tokio::main]
 async fn main() -> std::process::ExitCode {
 	let (tx, rx) = mpsc::channel::<logger::LogMessage>(128);
 	let cancel_token = tokio_util::sync::CancellationToken::new();
 	let task_tracker = tokio_util::task::TaskTracker::new();
-
-	let tx_clone = tx.clone();
-	let bus_connect_result = tokio::spawn(async move {
-		let result = zbus::connection::Builder::session();
-		match result {
-			Ok(val)	=> {
-				logger::log(
-					&tx_clone,
-					logger::Loglevel::Debug,
-					format!("Connected to session bus"),
-				).await;
-				Some(val)
-			},
-			Err(e)	=> {
-				crate::logger::log(
-					&tx_clone,
-					crate::logger::Loglevel::Fatal,
-					format!("Could not connect to session bus: {e:#?}"),
-				).await;
-				return None;
-			},
-		}
-	});
 
 	let cancel_token_clone = cancel_token.clone();
 	let _ = tokio::spawn(logger::logg_worker(rx, cancel_token_clone));
@@ -88,6 +66,30 @@ async fn main() -> std::process::ExitCode {
 				seccomp::process_seccomp_unotify(fd, &tx_clone);
 			}
 		);
+	});
+
+	let tx_clone = tx.clone();
+	let conf_clone = config_opts.clone();
+	let bus_connect_result = tokio::spawn(async move {
+		let result = ipc::IPC::connect(&conf_clone).await;
+		match result {
+			Ok(val)	=> {
+				logger::log(
+					&tx_clone,
+					logger::Loglevel::Debug,
+					format!("Connected to session bus"),
+				).await;
+				Some(val)
+			},
+			Err(e)	=> {
+				crate::logger::log(
+					&tx_clone,
+					crate::logger::Loglevel::Fatal,
+					format!("Could not connect to session bus: {e:#?}"),
+				).await;
+				return None;
+			},
+		}
 	});
 
 	let tx_landlock_clone = tx.clone();
