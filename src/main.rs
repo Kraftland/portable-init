@@ -99,7 +99,7 @@ async fn main() -> std::process::ExitCode {
 				Ok(val)	=> {
 					logger::log(
 						&tx_landlock_clone,
-						logger::Loglevel::Warn,
+						logger::Loglevel::Debug,
 						format!("Successfully set uclamp.max to: {val:?}"),
 					).await;
 				}
