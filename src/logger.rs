@@ -10,7 +10,10 @@ fn get_default_level() -> Loglevel {
 	Loglevel::Debug
 }
 
-pub async fn logg_worker(mut rx: tokio::sync::mpsc::Receiver<LogMessage>) {
+pub async fn logg_worker(
+		mut rx: tokio::sync::mpsc::Receiver<LogMessage>,
+		cancel_token: tokio_util::sync::CancellationToken,
+	) {
 	let mut log_level = get_default_level();
 	let raw_os_level = std::env::var("PORTABLE_LOGGING");
 	match raw_os_level {
@@ -24,7 +27,11 @@ pub async fn logg_worker(mut rx: tokio::sync::mpsc::Receiver<LogMessage>) {
 
 
 	loop {
-		let request = rx.recv().await.unwrap();
+		let request = tokio::select! {
+			_ = cancel_token.cancelled()	=> {return}
+			v = rx.recv()			=> {v}
+		};
+		let request = request.unwrap();
 		match request.level {
 			Loglevel::Debug
 				=> {

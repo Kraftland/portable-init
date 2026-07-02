@@ -31,8 +31,8 @@ async fn main() -> std::process::ExitCode {
 		}
 	});
 
-
-	let _ = tokio::spawn(logger::logg_worker(rx));
+	let cancel_token_clone = cancel_token.clone();
+	let _ = tokio::spawn(logger::logg_worker(rx, cancel_token_clone));
 
 	let config_opts = envs::get_configurations();
 	let config_opts = match config_opts {
@@ -172,11 +172,7 @@ async fn main() -> std::process::ExitCode {
 
 	tokio::select! {
 		_ = cancel_token.cancelled()	=> {
-			logger::log(
-				&tx,
-				logger::Loglevel::Debug,
-				format!("Shutting down on token cancel"),
-			).await;
+			println!("Shutting down on cancel");
 		},
 		_ = tokio::signal::ctrl_c()	=> {
 			logger::log(
