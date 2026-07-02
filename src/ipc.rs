@@ -3,7 +3,10 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum BusError {
 	#[error("Failed connecting to session bus: {0:#?}")]
-	ConnectError(zbus::Error)
+	ConnectError(zbus::Error),
+
+	#[error("Failed shutting down bus connection: {0:#?}")]
+	ShutdownError(String),
 }
 
 
@@ -13,7 +16,7 @@ pub struct IPC {
 }
 
 impl IPC {
-	pub async fn connect(conf: &crate::envs::ConfigOpts) -> Result<zbus::Connection, BusError> {
+	pub async fn connect(conf: &crate::envs::ConfigOpts) -> Result<Self, BusError> {
 		let conn = zbus::connection::Builder::session();
 		let conn = match conn {
 			Ok(val)	=> val,
@@ -30,8 +33,19 @@ impl IPC {
 		let conn = conn.allow_name_replacements(false);
 
 		match conn.build().await {
-			Ok(val)	=> Ok(val),
+			Ok(val)	=> Ok(Self { connection: val }),
 			Err(e)	=> Err(BusError::ConnectError(e))
+		}
+	}
+
+	pub async fn graceful_shutdown (self: Self) -> Result<(), BusError> {
+		match self.connection.close().await {
+			Ok(_)	=> {Ok(())}
+			Err(e)	=> {
+				Err(
+					BusError::ShutdownError(format!("{e:#?}"))
+				)
+			}
 		}
 	}
 }
