@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 
-struct Init {}
+struct Init;
 
 #[zbus::interface(
 	name = "top.kimiblock.Portable.Init",
@@ -92,12 +92,26 @@ impl IPC {
 		let daemon_name = format!("top.kimiblock.portable.{}", conf.sandbox_id);
 
 		match conn.build().await {
-			Ok(val)	=> Ok(
-				Self {
-					connection: val,
-					daemon_bus_name: daemon_name,
-				},
-			),
+			Ok(val)	=> {
+				let server = val.object_server()
+					.at(
+						"/top/kimiblock/portable/init",
+						Init,
+					).await;
+				match server {
+					Ok(_)	=> {}
+					Err(e)	=> {
+						return Err(BusError::ConnectError(e))
+					}
+				}
+				Ok(
+					Self {
+						connection: val,
+						daemon_bus_name: daemon_name,
+					},
+				)
+			}
+
 			Err(e)	=> Err(BusError::ConnectError(e))
 		}
 	}
