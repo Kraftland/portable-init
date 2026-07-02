@@ -51,6 +51,8 @@ impl Counter {
 			}
 			if count == 0 {
 				// TODO: implement stopping logic here
+				cancel_token.cancel();
+
 				let _ = systemd::daemon::notify(
 					false,
 					vec![(systemd::daemon::STATE_STOPPING, "1")].iter(),
