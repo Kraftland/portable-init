@@ -3,13 +3,13 @@ use serde::{Deserialize,Serialize};
 
 #[derive(Error, Debug)]
 pub enum EnvsError {
-	#[error("Unrecognised {0:?} environment {1:?}")]
+	#[error("Unrecognised {0:?} environment {1:#?}")]
 	InvalidEnvError(String, String),
 
-	#[error("Failed to get sandbox ID: {0:?}")]
+	#[error("Failed to get sandbox ID: {0:#?}")]
 	AppIDError(std::env::VarError),
 
-	#[error("Malformed environment variable: {0:?}")]
+	#[error("Malformed environment variable: {0:#?}")]
 	NonUnicodeError(std::env::VarError),
 
 	#[error("Failed to decode _portableHelperExtraFiles: {0:#?}: {1:#?}")]

@@ -10,11 +10,16 @@ mod counter;
 #[tokio::main]
 async fn main() -> std::process::ExitCode {
 	let (tx, rx) = mpsc::channel::<logger::LogMessage>(128);
+	let cancel_token = tokio_util::sync::CancellationToken::new();
+	let task_tracker = tokio_util::task::TaskTracker::new();
+
 	let tx_clone = tx.clone();
 	let bus_connect_result = tokio::spawn(async move {
 		let result = zbus::Connection::session().await;
 		match result {
-			Ok(val)	=> Some(val),
+			Ok(val)	=> {
+				Some(val)
+			},
 			Err(e)	=> {
 				crate::logger::log_sync(
 					&tx_clone,
@@ -129,16 +134,16 @@ async fn main() -> std::process::ExitCode {
 
 	let counter_info = counter::Counter::new();
 	let tx_clone = tx.clone();
+	let cancel_token_clone = cancel_token.clone();
 	let _ = tokio::spawn(
 		async move {
-			counter::Counter::start(counter_info.receive_channel, &tx_clone).await;
+			counter::Counter::start(
+				counter_info.receive_channel,
+				&tx_clone,
+				cancel_token_clone,
+			).await;
 		},
 	);
-
-	logger::log(&tx, logger::Loglevel::Debug, "Hello, World".to_string()).await;
-	std::thread::sleep(std::time::Duration::from_secs(5));
-
-
 
 	match seccomp_result.await {
 		Ok(())	=> {}
@@ -161,7 +166,31 @@ async fn main() -> std::process::ExitCode {
 		}
 	};
 
+	println!("Starting process...");
+
 	// TODO: start process
+
+	tokio::select! {
+		_ = cancel_token.cancelled()	=> {
+			logger::log(
+				&tx,
+				logger::Loglevel::Debug,
+				format!("Shutting down on token cancel"),
+			).await;
+		},
+		_ = tokio::signal::ctrl_c()	=> {
+			logger::log(
+				&tx,
+				logger::Loglevel::Warn,
+				format!("Shutting on SIGINT..."),
+			).await;
+			cancel_token.cancel();
+		},
+	};
+
+
+
+	task_tracker.wait().await;
 
 	return std::process::ExitCode::SUCCESS
 }
