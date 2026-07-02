@@ -204,9 +204,10 @@ async fn main() -> std::process::ExitCode {
 		},
 	};
 
-	tokio::spawn(ipc_object.graceful_shutdown());
-
 	task_tracker.wait().await;
+
+	ipc_object.request_shutdown().await.unwrap();
+	tokio::spawn(ipc_object.graceful_shutdown());
 
 	return std::process::ExitCode::SUCCESS
 }
