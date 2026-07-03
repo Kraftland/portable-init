@@ -80,7 +80,19 @@ impl Replacer {
 			Ok(v)	=> Ok(v),
 			Err(e)	=> Err(CmdlineReplacerError::ReceiveError(e))
 		}
+	}
 
+	pub async fn rm (
+		self: &Self,
+		origins: Vec<String>,
+	) -> Result<(), CmdlineReplacerError> {
+		let result = self.tx_query.clone().send(
+			ReplacerCommand::Remove { origin: origins }
+		).await;
+		match result {
+			Ok(_)	=> Ok(()),
+			Err(e)	=> Err(CmdlineReplacerError::SendError(e))
+		}
 	}
 }
 
