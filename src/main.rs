@@ -16,6 +16,9 @@ async fn main() -> std::process::ExitCode {
 	let task_tracker = tokio_util::task::TaskTracker::new();
 
 	let cancel_token_clone = cancel_token.clone();
+	let replacer_spawn = tokio::spawn(process_env::Replacer::new(cancel_token_clone));
+
+	let cancel_token_clone = cancel_token.clone();
 	let _ = tokio::spawn(logger::logg_worker(rx, cancel_token_clone));
 
 	let config_opts = envs::get_configurations();
@@ -69,11 +72,45 @@ async fn main() -> std::process::ExitCode {
 		);
 	});
 
+
+
 	let tx_clone = tx.clone();
 	let conf_clone = config_opts.clone();
+
+	let replacer = match replacer_spawn.await {
+		Ok(v)	=> v,
+		Err(e)	=> {
+			logger::log(
+				&tx,
+				logger::Loglevel::Fatal,
+				format!("Could not start cmdline replacer: {e:#?}"),
+			).await;
+			std::thread::sleep(std::time::Duration::from_secs(5));
+			panic!("{e:#?}");
+		}
+	};
+
+	let replacer = match replacer {
+		Ok(v)	=> v,
+		Err(e)	=> {
+			logger::log(
+				&tx,
+				logger::Loglevel::Fatal,
+				format!("Could not start cmdline replacer: {e:#?}"),
+			).await;
+			std::thread::sleep(std::time::Duration::from_secs(5));
+			panic!("{e:#?}");
+		},
+	};
+
+	let replacer_clone = replacer.clone();
+
 	//let cancel_token_clone = cancel_token.clone();
 	let bus_connect_result = tokio::spawn(async move {
-		let result = ipc::IPC::connect(&conf_clone).await;
+		let result = ipc::IPC::connect(
+			&conf_clone,
+			replacer_clone,
+		).await;
 		match result {
 			Ok(val)	=> {
 				logger::log(
@@ -154,9 +191,6 @@ async fn main() -> std::process::ExitCode {
 			).await;
 		},
 	);
-
-	let cancel_token_clone = cancel_token.clone();
-	let replacer = process_env::Replacer::new(cancel_token_clone);
 
 	match seccomp_result.await {
 		Ok(())	=> {}
