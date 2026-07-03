@@ -121,8 +121,19 @@ async fn main() -> std::process::ExitCode {
 
 	let spawner = {
 		let cancel_clone = cancel_token.clone();
-		let spawner = spawn::Spawner::new(cancel_clone);
-		spawner.await
+		let spawner = spawn::Spawner::new(&conf_clone, cancel_clone);
+		match spawner.await {
+			Ok(v)	=> v,
+			Err(e)	=> {
+				logger::log(
+					&tx,
+					logger::Loglevel::Debug,
+					format!("Connected to session bus"),
+				).await;
+				std::thread::sleep(std::time::Duration::from_secs(5));
+				panic!("{e:#?}");
+			},
+		}
 	};
 
 	let tx_clone = tx.clone();
