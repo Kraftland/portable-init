@@ -1,7 +1,15 @@
 use std::ffi::OsString;
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum SpawnError {
+	#[error("Could not create stream directory: {0:#?}")]
+	MkStreamDirError(std::io::Error)
+}
 
 pub struct Spawner {
 	tx:	tokio::sync::mpsc::Sender<SpawnMessage>,
+	base:	std::path::PathBuf,
 }
 
 enum SpawnMessage {
@@ -19,7 +27,10 @@ struct StartReply {
 }
 
 impl Spawner {
-	pub async fn new(cancel_token: tokio_util::sync::CancellationToken) -> Self {
+	pub async fn new(
+		conf: &crate::envs::ConfigOpts,
+		cancel_token: tokio_util::sync::CancellationToken,
+	) -> Result<Self, SpawnError> {
 		let (tx, rx) = tokio::sync::mpsc::channel::<SpawnMessage>(5);
 
 		tokio::spawn(
@@ -28,6 +39,21 @@ impl Spawner {
 				rx
 			),
 		);
+
+		let stream_path: std::path::PathBuf =
+			["/run", "console"]
+			.iter().
+			collect();
+
+		let result = std::fs::create_dir_all(&stream_path.into_os_string());
+		match result {
+			Ok(_)	=> {}
+			Err(e)	=> {
+				return Err(
+					SpawnError::MkStreamDirError(e)
+				);
+			}
+		}
 
 		Spawner {
 			tx: tx,
@@ -49,5 +75,6 @@ async fn run(
 		Some(v)	=> v,
 		None	=> return,
 	};
+
 	//std::fs::create_dir(path);
 }
