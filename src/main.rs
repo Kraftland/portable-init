@@ -7,6 +7,7 @@ mod uclamp;
 mod spawn;
 mod counter;
 mod ipc;
+mod process_env;
 
 #[tokio::main]
 async fn main() -> std::process::ExitCode {
