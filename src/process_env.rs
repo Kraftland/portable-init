@@ -1,4 +1,5 @@
 use thiserror::Error;
+use std::ffi::OsString;
 
 #[derive(Debug, Error)]
 pub enum CmdlineReplacerError {
@@ -18,14 +19,14 @@ pub struct Replacer {
 
 enum ReplacerCommand {
 	Add {
-		map: std::collections::HashMap<String, String>
+		map: std::collections::HashMap<OsString, OsString>
 	},
 	Remove {
-		origin: Vec<String>,
+		origin: Vec<OsString>,
 	},
 	Rewrite {
-		original_args: Vec<String>,
-		responder: tokio::sync::oneshot::Sender<Vec<String>>,
+		original_args: Vec<OsString>,
+		responder: tokio::sync::oneshot::Sender<Vec<OsString>>,
 	}
 }
 
@@ -50,7 +51,7 @@ impl Replacer {
 
 	pub async fn add(
 		self: &Self,
-		map: std::collections::HashMap<String, String>,
+		map: std::collections::HashMap<OsString, OsString>,
 	) -> Result<(), CmdlineReplacerError> {
 		let cmd = ReplacerCommand::Add { map };
 		let tx = self.tx_query.clone();
@@ -62,9 +63,9 @@ impl Replacer {
 
 	pub async fn rewrite (
 		self: &Self,
-		original_args: Vec<String>
-	) -> Result<Vec<String>, CmdlineReplacerError> {
-		let (tx, rx) = tokio::sync::oneshot::channel::<Vec<String>>();
+		original_args: Vec<OsString>
+	) -> Result<Vec<OsString>, CmdlineReplacerError> {
+		let (tx, rx) = tokio::sync::oneshot::channel::<Vec<OsString>>();
 		let cmd = ReplacerCommand::Rewrite {
 			original_args,
 			responder: tx,
@@ -85,7 +86,7 @@ impl Replacer {
 
 	pub async fn rm (
 		self: &Self,
-		origins: Vec<String>,
+		origins: Vec<OsString>,
 	) -> Result<(), CmdlineReplacerError> {
 		let result = self.tx_query.clone().send(
 			ReplacerCommand::Remove { origin: origins }
@@ -101,7 +102,7 @@ async fn run(
 	cancel_token:	tokio_util::sync::CancellationToken,
 	mut rx_query:	tokio::sync::mpsc::Receiver<ReplacerCommand>,
 ) {
-	let mut mappings =	std::collections::HashMap::<String, String>::new();
+	let mut mappings =	std::collections::HashMap::<OsString, OsString>::new();
 	loop {
 		let cmd = tokio::select! {
 			_ = cancel_token.cancelled()	=> {return}
