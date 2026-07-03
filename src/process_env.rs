@@ -127,7 +127,11 @@ async fn run(
 					mappings.insert(k.into(), v.into());
 				};
 			}
-			ReplacerCommand::Remove { origin } => {}
+			ReplacerCommand::Remove { origin } => {
+				for val in origin.iter() {
+					mappings.remove(val);
+				};
+			}
 			ReplacerCommand::Rewrite { original_args, responder } => {}
 		}
 	}
