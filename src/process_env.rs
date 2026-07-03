@@ -1,14 +1,14 @@
 use thiserror::Error;
 
-// Responder for command line rewrite service, Type must be vec.
-type Responder = tokio::sync::oneshot::Sender<Result<Vec<String>, CmdlineReplacerError>>;
-
 #[derive(Debug, Error)]
 pub enum CmdlineReplacerError {
 	#[error("Failed sending request to cmdline replacer: {0:#?}")]
 	SendError(tokio::sync::mpsc::error::SendError<
 		ReplacerCommand,
-	>)
+	>),
+
+	#[error("Failed receiving data from cmdline replacer: {0:#?}")]
+	ReceiveError(tokio::sync::oneshot::error::RecvError)
 }
 
 pub struct Replacer {
@@ -24,7 +24,7 @@ enum ReplacerCommand {
 	},
 	Rewrite {
 		original_args: Vec<String>,
-		responder: Responder,
+		responder: tokio::sync::oneshot::Sender<Vec<String>>,
 	}
 }
 
@@ -57,6 +57,30 @@ impl Replacer {
 			Ok(_)	=> {Ok(())},
 			Err(e)	=> {Err(CmdlineReplacerError::SendError(e))}
 		}
+	}
+
+	pub async fn rewrite (
+		self: &Self,
+		original_args: Vec<String>
+	) -> Result<Vec<String>, CmdlineReplacerError> {
+		let (tx, rx) = tokio::sync::oneshot::channel::<Vec<String>>();
+		let cmd = ReplacerCommand::Rewrite {
+			original_args,
+			responder: tx,
+		};
+
+		let tx_cmd = self.tx_query.clone();
+		match tx_cmd.send(cmd).await {
+			Ok(_)	=> {},
+			Err(e)	=> {return Err(CmdlineReplacerError::SendError(e))}
+		};
+
+		let result = rx.await;
+		match result {
+			Ok(v)	=> Ok(v),
+			Err(e)	=> Err(CmdlineReplacerError::ReceiveError(e))
+		}
+
 	}
 }
 
