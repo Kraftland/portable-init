@@ -12,8 +12,6 @@ pub enum SpawnError {
 
 pub struct Spawner {
 	tx:		tokio::sync::mpsc::Sender<SpawnMessage>,
-	base:		std::path::PathBuf,
-	counter:	crate::counter::Counter,
 }
 
 enum SpawnMessage {
@@ -40,15 +38,6 @@ impl Spawner {
 	) -> Result<Self, SpawnError> {
 		let (tx, rx) = tokio::sync::mpsc::channel::<SpawnMessage>(5);
 
-		tokio::spawn(
-			run(
-				cancel_token,
-				replacer,
-				rx,
-				counter,
-			),
-		);
-
 		let runtime_dir = std::env::var("XDG_RUNTIME_DIR");
 		let runtime_dir = match runtime_dir {
 			Ok(v)	=> v,
@@ -74,19 +63,28 @@ impl Spawner {
 			}
 		}
 
+		tokio::spawn(
+			run(
+				cancel_token,
+				replacer,
+				rx,
+				counter,
+				stream_path,
+			),
+		);
+
 		Ok(Spawner {
 			tx:		tx,
-			base:		stream_path,
-			counter:	counter,
 		})
 	}
 }
 
 async fn run(
-	cancel_token: tokio_util::sync::CancellationToken,
-	replacer: crate::process_env::Replacer,
-	mut rx: tokio::sync::mpsc::Receiver<SpawnMessage>,
-	counter: crate::counter::Counter,
+	cancel_token:	tokio_util::sync::CancellationToken,
+	replacer:	crate::process_env::Replacer,
+	mut rx:		tokio::sync::mpsc::Receiver<SpawnMessage>,
+	counter:	crate::counter::Counter,
+	base:		std::path::PathBuf,
 ) {
 
 	loop {
@@ -149,4 +147,3 @@ async fn run(
 
 	//std::fs::create_dir(path);
 }
-
