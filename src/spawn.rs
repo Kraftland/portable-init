@@ -82,19 +82,22 @@ async fn run(
 	replacer: crate::process_env::Replacer,
 	mut rx: tokio::sync::mpsc::Receiver<SpawnMessage>
 ) {
-	let msg = tokio::select! {
-		_	= cancel_token.cancelled()	=> {return}
-		e	= rx.recv()			=> {
-			e
-		}
-	};
-	let msg = match msg {
-		Some(v)	=> v,
-		None	=> return,
-	};
 
-
-
+	loop {
+		let msg = tokio::select! {
+			_	= cancel_token.cancelled()	=> {
+				return;
+			}
+			e	= rx.recv()			=> {
+				e
+			}
+		};
+		let msg = match msg {
+			Some(v)	=> v,
+			None	=> return,
+		};
+	}
 
 	//std::fs::create_dir(path);
 }
+
