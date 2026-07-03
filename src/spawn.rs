@@ -32,6 +32,7 @@ struct StartReply {
 impl Spawner {
 	pub async fn new(
 		conf: &crate::envs::ConfigOpts,
+		replacer: crate::process_env::Replacer,
 		cancel_token: tokio_util::sync::CancellationToken,
 	) -> Result<Self, SpawnError> {
 		let (tx, rx) = tokio::sync::mpsc::channel::<SpawnMessage>(5);
@@ -89,6 +90,9 @@ async fn run(
 		Some(v)	=> v,
 		None	=> return,
 	};
+
+
+
 
 	//std::fs::create_dir(path);
 }

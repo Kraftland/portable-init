@@ -121,7 +121,7 @@ async fn main() -> std::process::ExitCode {
 
 	let spawner = {
 		let cancel_clone = cancel_token.clone();
-		let spawner = spawn::Spawner::new(&conf_clone, cancel_clone);
+		let spawner = spawn::Spawner::new(&conf_clone, replacer, cancel_clone);
 		match spawner.await {
 			Ok(v)	=> v,
 			Err(e)	=> {
