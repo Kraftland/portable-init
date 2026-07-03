@@ -12,12 +12,7 @@ pub enum ProcessEnvError {
 }
 
 pub struct Replacer {
-	current_mappings: std::collections::HashMap<String, String>,
-	tx_add: tokio::sync::mpsc::Sender<std::collections::HashMap<String, String>>,
-	rx_add: tokio::sync::mpsc::Receiver<std::collections::HashMap<String, String>>,
-
-	tx_rm: tokio::sync::mpsc::Sender<Vec<String>>,
-	rx_rm: tokio::sync::mpsc::Receiver<Vec<String>>,
+	tx_query: tokio::sync::mpsc::Sender<ReplacerCommand>,
 }
 
 pub enum ReplacerCommand {
@@ -34,24 +29,22 @@ pub enum ReplacerCommand {
 }
 
 impl Replacer {
-	pub fn new() -> Result<Self, ProcessEnvError> {
-		let (tx_ad, rx_ad) = tokio::sync::mpsc::channel(5);
-		let (tx_r, rx_r) = tokio::sync::mpsc::channel(5);
+	pub async fn new(
+		cancel_token: tokio_util::sync::CancellationToken,
+	)
+	-> Result<Self, ProcessEnvError> {
+		let (tx_r, rx_r) = tokio::sync::mpsc::channel::<ReplacerCommand>(5);
+
+		tokio::spawn(run(
+			cancel_token,
+			rx_r,
+		));
+
 		Ok(
 			Self {
-				current_mappings: std::collections::HashMap::new(),
-				tx_add: tx_ad,
-				tx_rm: tx_r,
-				rx_add: rx_ad,
-				rx_rm: rx_r,
+				tx_query: tx_r,
 			},
 		)
-	}
-
-	pub async fn run(self: &Self, cancel_token: tokio_util::sync::CancellationToken) {
-		tokio::select! {
-			_ = cancel_token.cancelled() => {return}
-		}
 	}
 
 	pub async fn query(self: &Self, cmd: ReplacerCommand) -> Result<(), ProcessEnvError> {
@@ -76,6 +69,19 @@ impl Replacer {
 			ReplacerCommand::Rewrite { original_args, responder } => {
 				Ok(())
 			}
+		}
+	}
+}
+
+async fn run(
+	cancel_token:	tokio_util::sync::CancellationToken,
+	mut rx_query:	tokio::sync::mpsc::Receiver<ReplacerCommand>,
+) {
+	let mut mappings =	std::collections::HashMap::<String, String>::new();
+	loop {
+		tokio::select! {
+			_ = cancel_token.cancelled()	=> {return}
+			c = rx_query.recv()		=> {}
 		}
 	}
 }
