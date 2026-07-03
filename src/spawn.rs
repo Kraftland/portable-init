@@ -19,14 +19,14 @@ enum SpawnMessage {
 	Start {
 		target:	OsString,
 		args:	Vec<OsString>,
+		stream:	bool,
 		reply:	tokio::sync::oneshot::Receiver<StartReply>,
 	}
 }
 
 struct StartReply {
 	id:		usize,
-	stream:		bool,
-	base_dir:	std::path::PathBuf,
+	base_dir:	Option<std::path::PathBuf>,
 }
 
 impl Spawner {
