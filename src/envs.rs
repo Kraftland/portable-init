@@ -1,4 +1,5 @@
 use thiserror::Error;
+use std::ffi::OsString;
 use serde::{Deserialize,Serialize};
 
 #[derive(Error, Debug)]
@@ -24,7 +25,7 @@ pub struct ConfigOpts {
 	pub sandbox_id:		String,
 
 	// Origin -> dest
-	pub file_map:		std::collections::HashMap<String, String>,
+	pub file_map:		std::collections::HashMap<OsString, OsString>,
 
 	pub inhibit:		bool,
 }
@@ -32,12 +33,12 @@ pub struct ConfigOpts {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 struct PassFiles {
-	file_map:		std::collections::HashMap<String, String>
+	file_map:		std::collections::HashMap<OsString, OsString>
 }
 
 fn get_pass_files_env() -> Result<PassFiles, EnvsError> {
 	let files_json = std::env::var("_portableHelperExtraFiles");
-	let files_map: std::collections::HashMap<String,String> = std::collections::HashMap::new();
+	let files_map: std::collections::HashMap<OsString,OsString> = std::collections::HashMap::new();
 	let files_json = match files_json {
 		Ok(val)	=> val,
 		Err(e)	=> {
