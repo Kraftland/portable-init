@@ -40,7 +40,8 @@ impl Spawner {
 		tokio::spawn(
 			run(
 				cancel_token,
-				rx
+				replacer,
+				rx,
 			),
 		);
 
@@ -78,6 +79,7 @@ impl Spawner {
 
 async fn run(
 	cancel_token: tokio_util::sync::CancellationToken,
+	replacer: crate::process_env::Replacer,
 	mut rx: tokio::sync::mpsc::Receiver<SpawnMessage>
 ) {
 	let msg = tokio::select! {
