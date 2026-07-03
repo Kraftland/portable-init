@@ -71,6 +71,27 @@ impl Init {
 				return
 			},
 		};
+
+		let uris = files.uris();
+		let mut selected_paths: Vec<String> = vec![];
+		for uri in uris.iter() {
+			let pth = uri.as_str();
+			let result = pth.strip_prefix("file://");
+			match result {
+				Some(v)	=> {
+					selected_paths.push(v.to_string());
+				}
+				None	=> {
+					crate::logger::log(
+						&self.logtx,
+						crate::logger::Loglevel::Warn,
+						format!(
+						"Error decoding Portal response: file:// prefix not found",
+						)
+					).await;
+				}
+			}
+		};
 	}
 
 	#[zbus(
