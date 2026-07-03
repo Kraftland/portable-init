@@ -2,7 +2,9 @@ use thiserror::Error;
 
 const INIT_APIVER: u32 = 18;
 
-struct Init;
+struct Init {
+	replacer: crate::process_env::Replacer
+}
 
 #[zbus::interface(
 	name = "top.kimiblock.Portable.Init",
@@ -91,7 +93,10 @@ impl IPC {
 		}
 	}
 
-	pub async fn connect(conf: &crate::envs::ConfigOpts) -> Result<Self, BusError> {
+	pub async fn connect(
+		conf: &crate::envs::ConfigOpts,
+		replace_ipc: crate::process_env::Replacer
+	) -> Result<Self, BusError> {
 		let conn = zbus::connection::Builder::session();
 		let conn = match conn {
 			Ok(val)	=> val,
@@ -117,7 +122,7 @@ impl IPC {
 		let result = conn.object_server()
 			.at(
 				"/top/kimiblock/portable/init",
-				Init,
+				Init{replacer: replace_ipc},
 			).await;
 
 		match result {

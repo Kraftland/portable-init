@@ -11,6 +11,7 @@ pub enum CmdlineReplacerError {
 	ReceiveError(tokio::sync::oneshot::error::RecvError)
 }
 
+#[derive(Clone)]
 pub struct Replacer {
 	tx_query: tokio::sync::mpsc::Sender<ReplacerCommand>,
 }
