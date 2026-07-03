@@ -89,8 +89,47 @@ impl Init {
 						"Error decoding Portal response: file:// prefix not found",
 						)
 					).await;
+					return;
 				}
 			}
+		};
+
+		let home = std::env::home_dir();
+		let home = match home {
+			Some(v)	=>	v,
+			None	=>	{
+				crate::logger::log(
+					&self.logtx,
+					crate::logger::Loglevel::Warn,
+					format!(
+						"Could not locate $HOME",
+					)
+				).await;
+				return;
+			}
+		};
+
+		let mut shared_dir = home;
+		shared_dir.push("Shared");
+
+		for file in selected_paths {
+			let dest = shared_dir.clone();
+			let source = std::path::PathBuf::from(file);
+			let file_name = source.file_name();
+			let file_name = match file_name {
+				Some(v)	=> {v}
+				None	=> {
+					crate::logger::log(
+						&self.logtx,
+						crate::logger::Loglevel::Warn,
+						format!(
+						"Could not resolve file path for: {source:#?}",
+						)
+					).await;
+					return;
+				}
+			};
+
 		};
 	}
 
