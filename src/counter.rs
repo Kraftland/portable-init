@@ -2,7 +2,6 @@
 
 pub struct Counter {
 	pub send_channel: tokio::sync::mpsc::Sender<CounterMessage>,
-	pub receive_channel: tokio::sync::mpsc::Receiver<CounterMessage>,
 }
 
 pub enum CounterMessage {
@@ -11,11 +10,19 @@ pub enum CounterMessage {
 }
 
 impl Counter {
-	pub fn new () -> Self {
+	pub async fn new (
+			logtx: &tokio::sync::mpsc::Sender<crate::logger::LogMessage>,
+			cancel_token: tokio_util::sync::CancellationToken,
+	) -> Self {
 		let (tx, rx) = tokio::sync::mpsc::channel::<CounterMessage>(16);
-		Self { send_channel: tx , receive_channel: rx }
+
+		tokio::spawn(start(rx, logtx, cancel_token));
+
+		Self { send_channel: tx }
 	}
-	pub async fn start (
+}
+
+	async fn start (
 			mut receive_chan: tokio::sync::mpsc::Receiver<CounterMessage>,
 			logtx: &tokio::sync::mpsc::Sender<crate::logger::LogMessage>,
 			cancel_token: tokio_util::sync::CancellationToken,
@@ -81,4 +88,3 @@ impl Counter {
 			};
 		}
 	}
-}
