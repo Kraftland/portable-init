@@ -102,9 +102,9 @@ async fn run(
 ) {
 	let mut mappings =	std::collections::HashMap::<String, String>::new();
 	loop {
-		tokio::select! {
+		let cmd = tokio::select! {
 			_ = cancel_token.cancelled()	=> {return}
-			c = rx_query.recv()		=> {}
-		}
+			c = rx_query.recv()		=> {c}
+		};
 	}
 }
