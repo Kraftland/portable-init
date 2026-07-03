@@ -10,15 +10,16 @@ pub enum ProcessEnvError {
 
 pub struct Replacer {
 	current_mappings: std::collections::HashMap<String, String>,
+	tx_add: tokio::sync::mpsc::Sender<std::collections::HashMap<String, String>>,
+	rx_add: tokio::sync::mpsc::Receiver<std::collections::HashMap<String, String>>,
 }
 
 pub enum ReplacerCommand {
 	Add {
-		origin: String,
-		dest: String,
+		map: std::collections::HashMap<String, String>
 	},
 	Remove {
-		origin: String,
+		origin: Vec<String>,
 	},
 	Rewrite {
 		original_args: Vec<String>,
@@ -33,5 +34,26 @@ impl Replacer {
 				current_mappings: std::collections::HashMap::new(),
 			},
 		)
+	}
+
+	pub async fn run(self: &Self, cancel_token: tokio_util::sync::CancellationToken) {
+		tokio::select! {
+			_ = cancel_token.cancelled() => {return}
+		}
+	}
+
+	pub async fn query(self: &Self, cmd: ReplacerCommand) -> Result<(), ProcessEnvError> {
+		match cmd {
+			ReplacerCommand::Add { map } => {
+				let tx = self.tx_add.clone();
+				tx.send(
+					map
+				).await;
+			}
+			ReplacerCommand::Remove { origin } => {
+
+			}
+			ReplacerCommand::Rewrite { original_args, responder } => {}
+		};
 	}
 }
