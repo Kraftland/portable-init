@@ -155,6 +155,9 @@ async fn main() -> std::process::ExitCode {
 		},
 	);
 
+	let cancel_token_clone = cancel_token.clone();
+	let replacer = process_env::Replacer::new(cancel_token_clone);
+
 	match seccomp_result.await {
 		Ok(())	=> {}
 		Err(e)	=> {
