@@ -119,6 +119,21 @@ impl Init {
 		let mut shared_dir = home;
 		shared_dir.push("Shared");
 
+		let result = std::fs::create_dir(shared_dir.as_path());
+		match result {
+			Ok(_)	=> {},
+			Err(e)	=> {
+				crate::logger::log(
+					&self.logtx,
+					crate::logger::Loglevel::Warn,
+					format!(
+						"Could not create shared directory: {e:#?}",
+					)
+				).await;
+				return;
+			}
+		}
+
 		let mut map = std::collections::HashMap::<OsString, OsString>::new();
 
 		for file in selected_paths {
