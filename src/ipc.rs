@@ -60,6 +60,17 @@ impl Init {
 			},
 		};
 
+		let files = match files.response() {
+			Ok(v)	=> v,
+			Err(e)	=> {
+				crate::logger::log(
+					&self.logtx,
+					crate::logger::Loglevel::Warn,
+					format!("Could not request filesystem access: {e:#?}")
+				).await;
+				return
+			},
+		};
 	}
 
 	#[zbus(
