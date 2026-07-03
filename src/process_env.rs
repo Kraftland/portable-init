@@ -32,9 +32,15 @@ pub enum ReplacerCommand {
 
 impl Replacer {
 	pub fn new() -> Result<Self, ProcessEnvError> {
+		let (tx_ad, rx_ad) = tokio::sync::mpsc::channel(5);
+		let (tx_r, rx_r) = tokio::sync::mpsc::channel(5);
 		Ok(
 			Self {
 				current_mappings: std::collections::HashMap::new(),
+				tx_add: tx_ad,
+				tx_rm: tx_r,
+				rx_add: rx_ad,
+				rx_rm: rx_r,
 			},
 		)
 	}
