@@ -113,7 +113,18 @@ async fn run(
 		};
 
 		match cmd {
-			ReplacerCommand::Add { map } => {}
+			ReplacerCommand::Add { map } => {
+				for (k, v) in map.iter() {
+					let result = mappings.contains_key(k);
+					match result {
+						true	=> {
+							mappings.remove(k);
+						}
+						false	=> {}
+					};
+					mappings.insert(k.into(), v.into());
+				};
+			}
 			ReplacerCommand::Remove { origin } => {}
 			ReplacerCommand::Rewrite { original_args, responder } => {}
 		}
