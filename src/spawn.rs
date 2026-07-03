@@ -11,8 +11,9 @@ pub enum SpawnError {
 }
 
 pub struct Spawner {
-	tx:	tokio::sync::mpsc::Sender<SpawnMessage>,
-	base:	std::path::PathBuf,
+	tx:		tokio::sync::mpsc::Sender<SpawnMessage>,
+	base:		std::path::PathBuf,
+	counter:	crate::counter::Counter,
 }
 
 enum SpawnMessage {
@@ -21,6 +22,7 @@ enum SpawnMessage {
 		args:	Vec<OsString>,
 		stream:	bool,
 		reply:	tokio::sync::oneshot::Receiver<StartReply>,
+		envs: std::collections::HashMap<OsString, OsString>,
 	}
 }
 
@@ -34,6 +36,7 @@ impl Spawner {
 		conf: &crate::envs::ConfigOpts,
 		replacer: crate::process_env::Replacer,
 		cancel_token: tokio_util::sync::CancellationToken,
+		counter: crate::counter::Counter,
 	) -> Result<Self, SpawnError> {
 		let (tx, rx) = tokio::sync::mpsc::channel::<SpawnMessage>(5);
 
@@ -71,8 +74,9 @@ impl Spawner {
 		}
 
 		Ok(Spawner {
-			tx:	tx,
-			base:	stream_path,
+			tx:		tx,
+			base:		stream_path,
+			counter:	counter,
 		})
 	}
 }
@@ -92,10 +96,46 @@ async fn run(
 				e
 			}
 		};
-		let msg = match msg {
-			Some(v)	=> v,
-			None	=> return,
-		};
+
+		let cancel_clone = cancel_token.clone();
+		let replacer_clone = replacer.clone();
+		tokio::spawn(async move {
+			let msg = match msg {
+				Some(v)	=>	v,
+				None	=>	{return}
+			};
+
+			match msg {
+				SpawnMessage::Start { target, args, stream, reply, envs } => {
+					if cancel_clone.is_cancelled() {
+						return;
+					}
+					let args_new = replacer_clone.rewrite(args);
+					let args_new = match args_new.await {
+						Ok(v)	=> {v}
+						Err(_)	=> {
+							// TODO: add logging here
+							return;
+						}
+					};
+
+					let mut command = std::process::Command::new(target);
+
+					let command = command.envs(envs);
+					let command = command.args(args_new.iter());
+
+
+
+					if stream {
+						// TODO: stream stuff here
+					} else {
+
+					};
+
+				}
+			}
+		});
+
 	}
 
 	//std::fs::create_dir(path);

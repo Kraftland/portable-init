@@ -72,6 +72,17 @@ async fn main() -> std::process::ExitCode {
 		);
 	});
 
+	let tx_clone = tx.clone();
+	let cancel_token_clone = cancel_token.clone();
+	let counter_spawn = tokio::spawn(
+		async move {
+			return counter::Counter::new(
+				&tx_clone,
+				cancel_token_clone,
+			).await;
+		},
+	);
+
 	let conf_clone = config_opts.clone();
 
 	let replacer = match replacer_spawn.await {
@@ -119,9 +130,27 @@ async fn main() -> std::process::ExitCode {
 
 	let replacer_clone = replacer.clone();
 
+	let counter = match counter_spawn.await {
+		Ok(v)	=> v,
+		Err(e)	=> {
+			logger::log(
+				&tx,
+				logger::Loglevel::Fatal,
+				format!("Could not contact replacer: {e:#?}"),
+			).await;
+			std::thread::sleep(std::time::Duration::from_secs(5));
+			panic!("{e:#?}");
+		}
+	};
+
 	let spawner = {
 		let cancel_clone = cancel_token.clone();
-		let spawner = spawn::Spawner::new(&conf_clone, replacer, cancel_clone);
+		let spawner = spawn::Spawner::new(
+			&conf_clone,
+			replacer,
+			cancel_clone,
+			counter,
+		);
 		match spawner.await {
 			Ok(v)	=> v,
 			Err(e)	=> {
@@ -211,19 +240,6 @@ async fn main() -> std::process::ExitCode {
 				}
 			}
 		}
-	);
-
-	let counter_info = counter::Counter::new();
-	let tx_clone = tx.clone();
-	let cancel_token_clone = cancel_token.clone();
-	let _ = tokio::spawn(
-		async move {
-			counter::Counter::start(
-				counter_info.receive_channel,
-				&tx_clone,
-				cancel_token_clone,
-			).await;
-		},
 	);
 
 	match seccomp_result.await {
