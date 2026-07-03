@@ -132,7 +132,17 @@ async fn run(
 					mappings.remove(val);
 				};
 			}
-			ReplacerCommand::Rewrite { original_args, responder } => {}
+			ReplacerCommand::Rewrite { original_args, responder } => {
+				let mut resp: Vec<OsString> = vec![];
+				for arg in original_args.iter() {
+					if mappings.contains_key(arg) {
+						// this should be safe since we check for existance
+						resp.push(mappings.get(arg).unwrap().into());
+					} else {
+						resp.push(arg.to_owned());
+					};
+				};
+			}
 		}
 	}
 }
