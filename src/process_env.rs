@@ -5,7 +5,10 @@ type Responder = tokio::sync::oneshot::Sender<Result<Vec<String>, ProcessEnvErro
 
 #[derive(Debug, Error)]
 pub enum ProcessEnvError {
-
+	#[error("Failed sending request to cmdline replacer: {0:#?}")]
+	SendError(tokio::sync::mpsc::error::SendError<
+		std::collections::HashMap<String, String>,
+	>)
 }
 
 pub struct Replacer {
@@ -55,14 +58,24 @@ impl Replacer {
 		match cmd {
 			ReplacerCommand::Add { map } => {
 				let tx = self.tx_add.clone();
-				tx.send(
+				let result = tx.send(
 					map
 				).await;
+				match result {
+					Ok(_)	=> {Ok(())}
+					Err(e)	=> {
+						Err(
+							ProcessEnvError::SendError(e)
+						)
+					}
+				}
 			}
 			ReplacerCommand::Remove { origin } => {
-
+				Ok(())
 			}
-			ReplacerCommand::Rewrite { original_args, responder } => {}
-		};
+			ReplacerCommand::Rewrite { original_args, responder } => {
+				Ok(())
+			}
+		}
 	}
 }
