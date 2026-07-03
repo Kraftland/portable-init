@@ -95,6 +95,12 @@ impl Init {
 			}
 		};
 
+		crate::logger::log(
+			&self.logtx,
+			crate::logger::Loglevel::Debug,
+			format!("Got response from portal: {selected_paths:?}"),
+		).await;
+
 		let home = std::env::home_dir();
 		let home = match home {
 			Some(v)	=>	v,
@@ -133,6 +139,15 @@ impl Init {
 				}
 			};
 			dest.push(file_name);
+
+			crate::logger::log(
+				&self.logtx,
+				crate::logger::Loglevel::Debug,
+				format!(
+					"Linking {dest:?} to {source:?}",
+				),
+			).await;
+
 			let result = std::os::unix::fs::symlink(
 				&source,
 				&dest,
