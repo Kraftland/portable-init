@@ -113,7 +113,7 @@ impl Init {
 		shared_dir.push("Shared");
 
 		for file in selected_paths {
-			let dest = shared_dir.clone();
+			let mut dest = shared_dir.clone();
 			let source = std::path::PathBuf::from(file);
 			let file_name = source.file_name();
 			let file_name = match file_name {
@@ -129,7 +129,24 @@ impl Init {
 					continue;
 				}
 			};
-
+			dest.push(file_name);
+			let result = std::os::unix::fs::symlink(
+				source,
+				dest,
+			);
+			match result {
+				Ok(_)	=> {}
+				Err(e)	=> {
+					crate::logger::log(
+						&self.logtx,
+						crate::logger::Loglevel::Warn,
+						format!(
+						"Could not link shared file: {e:#?}",
+						)
+					).await;
+					continue;
+				}
+			}
 		};
 	}
 
