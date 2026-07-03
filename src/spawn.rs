@@ -41,5 +41,12 @@ async fn run(
 ) {
 	let msg = tokio::select! {
 		_	= cancel_token.cancelled()	=> {return}
+		e	= rx.recv()			=> {
+			e
+		}
+	};
+	let msg = match msg {
+		Some(v)	=> v,
+		None	=> return,
 	};
 }
