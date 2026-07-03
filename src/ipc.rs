@@ -126,7 +126,7 @@ impl Init {
 						"Could not resolve file path for: {source:#?}",
 						)
 					).await;
-					return;
+					continue;
 				}
 			};
 
