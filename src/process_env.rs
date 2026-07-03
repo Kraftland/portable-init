@@ -8,7 +8,9 @@ pub enum ProcessEnvError {
 
 }
 
-pub struct Replacer;
+pub struct Replacer {
+	current_mappings: std::collections::HashMap<String, String>,
+}
 
 pub enum ReplacerCommand {
 	Add {
@@ -27,7 +29,9 @@ pub enum ReplacerCommand {
 impl Replacer {
 	pub fn new() -> Result<Self, ProcessEnvError> {
 		Ok(
-			Self {},
+			Self {
+				current_mappings: std::collections::HashMap::new(),
+			},
 		)
 	}
 }
