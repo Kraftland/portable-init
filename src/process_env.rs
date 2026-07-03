@@ -106,5 +106,16 @@ async fn run(
 			_ = cancel_token.cancelled()	=> {return}
 			c = rx_query.recv()		=> {c}
 		};
+
+		let cmd = match cmd {
+			Some(v)	=> v,
+			None	=> {return}
+		};
+
+		match cmd {
+			ReplacerCommand::Add { map } => {}
+			ReplacerCommand::Remove { origin } => {}
+			ReplacerCommand::Rewrite { original_args, responder } => {}
+		}
 	}
 }
