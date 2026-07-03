@@ -12,6 +12,9 @@ pub struct Replacer {
 	current_mappings: std::collections::HashMap<String, String>,
 	tx_add: tokio::sync::mpsc::Sender<std::collections::HashMap<String, String>>,
 	rx_add: tokio::sync::mpsc::Receiver<std::collections::HashMap<String, String>>,
+
+	tx_rm: tokio::sync::mpsc::Sender<Vec<String>>,
+	rx_rm: tokio::sync::mpsc::Receiver<Vec<String>>,
 }
 
 pub enum ReplacerCommand {
