@@ -4,7 +4,10 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum SpawnError {
 	#[error("Could not create stream directory: {0:#?}")]
-	MkStreamDirError(std::io::Error)
+	MkStreamDirError(std::io::Error),
+
+	#[error("Could not locate XDG_RUNTIME_DIR: {0:#?}")]
+	RuntimeDirError(std::env::VarError),
 }
 
 pub struct Spawner {
@@ -40,12 +43,22 @@ impl Spawner {
 			),
 		);
 
+		let runtime_dir = std::env::var("XDG_RUNTIME_DIR");
+		let runtime_dir = match runtime_dir {
+			Ok(v)	=> v,
+			Err(e)	=> {
+				return Err(
+					SpawnError::RuntimeDirError(e)
+				)
+			}
+		};
+
 		let stream_path: std::path::PathBuf =
-			["/run", "console"]
+			[runtime_dir.as_str(), "portable", conf.sandbox_id.as_str(), "console"]
 			.iter().
 			collect();
 
-		let result = std::fs::create_dir_all(&stream_path.into_os_string());
+		let result = std::fs::create_dir_all(&stream_path);
 		match result {
 			Ok(_)	=> {}
 			Err(e)	=> {
@@ -55,9 +68,10 @@ impl Spawner {
 			}
 		}
 
-		Spawner {
-			tx: tx,
-		}
+		Ok(Spawner {
+			tx:	tx,
+			base:	stream_path,
+		})
 	}
 }
 
