@@ -1,4 +1,5 @@
 use thiserror::Error;
+use std::ffi::OsString;
 
 const INIT_APIVER: u32 = 18;
 
@@ -112,6 +113,8 @@ impl Init {
 		let mut shared_dir = home;
 		shared_dir.push("Shared");
 
+		let mut map = std::collections::HashMap::<OsString, OsString>::new();
+
 		for file in selected_paths {
 			let mut dest = shared_dir.clone();
 			let source = std::path::PathBuf::from(file);
@@ -131,8 +134,8 @@ impl Init {
 			};
 			dest.push(file_name);
 			let result = std::os::unix::fs::symlink(
-				source,
-				dest,
+				&source,
+				&dest,
 			);
 			match result {
 				Ok(_)	=> {}
@@ -146,8 +149,22 @@ impl Init {
 					).await;
 					continue;
 				}
-			}
+			};
+			map.insert(source.into_os_string(), dest.into_os_string());
 		};
+		let result = self.replacer.add(map).await;
+		match result {
+			Ok(_)	=> {}
+			Err(e)	=> {
+				crate::logger::log(
+					&self.logtx,
+					crate::logger::Loglevel::Warn,
+					format!(
+					"Could not contact replacer: {e:#?}",
+					)
+				).await;
+			}
+		}
 	}
 
 	#[zbus(
