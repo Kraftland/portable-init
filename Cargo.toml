@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+ashpd = { version = "0.13.12", features = ["file_chooser"] }
 landlock = "0.4.5"
 libseccomp = "0.4.0"
 serde = "1.0.228"

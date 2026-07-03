@@ -3,7 +3,8 @@ use thiserror::Error;
 const INIT_APIVER: u32 = 18;
 
 struct Init {
-	replacer: crate::process_env::Replacer
+	replacer:	crate::process_env::Replacer,
+	logtx:		tokio::sync::mpsc::Sender<crate::logger::LogMessage>,
 }
 
 #[zbus::interface(
@@ -35,7 +36,30 @@ impl Init {
 		&self,
 		directory: bool
 	) {
-		// TODO: wire Portal request here
+		let naming: String = match directory {
+			true	=> format!("directories"),
+			false	=> format!("files"),
+		};
+		let files = ashpd::desktop::file_chooser::SelectedFiles::open_file()
+			.directory(directory)
+			.title(format!("Import {naming}").as_str())
+			.accept_label("Confirm")
+			.modal(true)
+			.multiple(true)
+			.send()
+			.await;
+		let files = match files {
+			Ok(v)	=> v,
+			Err(e)	=> {
+				crate::logger::log(
+					&self.logtx,
+					crate::logger::Loglevel::Warn,
+					format!("Could not request filesystem access: {e:#?}")
+				).await;
+				return
+			},
+		};
+
 	}
 
 	#[zbus(
@@ -95,7 +119,8 @@ impl IPC {
 
 	pub async fn connect(
 		conf: &crate::envs::ConfigOpts,
-		replace_ipc: crate::process_env::Replacer
+		replace_ipc: crate::process_env::Replacer,
+		logtx: tokio::sync::mpsc::Sender<crate::logger::LogMessage>,
 	) -> Result<Self, BusError> {
 		let conn = zbus::connection::Builder::session();
 		let conn = match conn {
@@ -122,7 +147,10 @@ impl IPC {
 		let result = conn.object_server()
 			.at(
 				"/top/kimiblock/portable/init",
-				Init{replacer: replace_ipc},
+				Init{
+					replacer: replace_ipc,
+					logtx: logtx,
+				},
 			).await;
 
 		match result {
