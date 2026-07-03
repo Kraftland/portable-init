@@ -127,8 +127,8 @@ async fn main() -> std::process::ExitCode {
 			Err(e)	=> {
 				logger::log(
 					&tx,
-					logger::Loglevel::Debug,
-					format!("Connected to session bus"),
+					logger::Loglevel::Fatal,
+					format!("Could not start task spawner: {e:#?}"),
 				).await;
 				std::thread::sleep(std::time::Duration::from_secs(5));
 				panic!("{e:#?}");
