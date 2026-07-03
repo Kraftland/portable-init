@@ -72,9 +72,6 @@ async fn main() -> std::process::ExitCode {
 		);
 	});
 
-
-
-	let tx_clone = tx.clone();
 	let conf_clone = config_opts.clone();
 
 	let replacer = match replacer_spawn.await {
