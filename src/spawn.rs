@@ -45,6 +45,7 @@ impl Spawner {
 				cancel_token,
 				replacer,
 				rx,
+				counter,
 			),
 		);
 
@@ -84,7 +85,8 @@ impl Spawner {
 async fn run(
 	cancel_token: tokio_util::sync::CancellationToken,
 	replacer: crate::process_env::Replacer,
-	mut rx: tokio::sync::mpsc::Receiver<SpawnMessage>
+	mut rx: tokio::sync::mpsc::Receiver<SpawnMessage>,
+	counter: crate::counter::Counter,
 ) {
 
 	loop {
@@ -99,6 +101,7 @@ async fn run(
 
 		let cancel_clone = cancel_token.clone();
 		let replacer_clone = replacer.clone();
+		let counter_tx = counter.send_channel.clone();
 		tokio::spawn(async move {
 			let msg = match msg {
 				Some(v)	=>	v,
@@ -124,13 +127,19 @@ async fn run(
 					let command = command.envs(envs);
 					let command = command.args(args_new.iter());
 
-
+					counter_tx.send(
+						crate::counter::CounterMessage::ProcessStarted,
+					).await;
 
 					if stream {
 						// TODO: stream stuff here
 					} else {
 
 					};
+
+					counter_tx.send(
+						crate::counter::CounterMessage::ProcessDied,
+					).await;
 
 				}
 			}
