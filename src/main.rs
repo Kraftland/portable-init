@@ -118,6 +118,13 @@ async fn main() -> std::process::ExitCode {
 
 
 	let replacer_clone = replacer.clone();
+
+	let spawner = {
+		let cancel_clone = cancel_token.clone();
+		let spawner = spawn::Spawner::new(cancel_clone);
+		spawner.await
+	};
+
 	let tx_clone = tx.clone();
 	//let cancel_token_clone = cancel_token.clone();
 	let bus_connect_result = tokio::spawn(async move {
