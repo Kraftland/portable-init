@@ -103,6 +103,23 @@ async fn main() -> std::process::ExitCode {
 		},
 	};
 
+	{
+		let map = config_opts.file_map.clone();
+		match replacer.add(map).await {
+			Ok(_)	=> {}
+			Err(e)	=> {
+				logger::log(
+					&tx,
+					logger::Loglevel::Fatal,
+					format!("Could not contact replacer: {e:#?}"),
+				).await;
+				std::thread::sleep(std::time::Duration::from_secs(5));
+				panic!("{e:#?}");
+			}
+		};
+	}
+
+
 	let replacer_clone = replacer.clone();
 	let tx_clone = tx.clone();
 	//let cancel_token_clone = cancel_token.clone();
