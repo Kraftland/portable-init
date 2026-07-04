@@ -105,7 +105,7 @@ async fn run(
 		let cancel_clone = cancel_token.clone();
 		let replacer_clone = replacer.clone();
 		let counter_tx = counter.send_channel.clone();
-		let mut counter_clone = std::sync::Arc::clone(&count_mu);
+		let counter_clone = std::sync::Arc::clone(&count_mu);
 		tokio::spawn(async move {
 			{
 				let data = counter_clone.lock();
@@ -114,7 +114,7 @@ async fn run(
 						*v+=1;
 					}
 					Err(e)	=> {
-						// TODO: failure handling
+						panic!("{e:#?}")
 					}
 				};
 			};
