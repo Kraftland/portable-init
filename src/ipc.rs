@@ -12,7 +12,8 @@ struct Init {
 
 #[derive(Debug, zbus::DBusError)]
 enum AuxStartError {
-	RecvError(String)
+	RecvError(String),
+	ReplaceError(String),
 }
 
 #[zbus::interface(
@@ -63,8 +64,11 @@ impl Init {
 			args.push(val.into());
 		};
 
-		let args = {
-			self.replacer.rewrite(args)
+		let args = match self.replacer.rewrite(args).await {
+			Ok(v)	=> v,
+			Err(e)	=> {
+				return Err(AuxStartError::ReplaceError(format!("{e}:#?")))
+			}
 		};
 
 
