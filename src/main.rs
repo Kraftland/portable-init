@@ -278,9 +278,22 @@ async fn main() -> std::process::ExitCode {
 
 	println!("Starting process...");
 
+
+
 	// TODO: start process
 
+
+
 	task_tracker.close();
+
+	let sigterm = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate());
+
+	let mut sigterm = match sigterm {
+		Ok(v)	=> {v}
+		Err(e)	=> {
+			panic!("Could not register signal listener: {e:#?}")
+		}
+	};
 
 	tokio::select! {
 		_ = cancel_token.cancelled()	=> {
@@ -290,6 +303,10 @@ async fn main() -> std::process::ExitCode {
 			println!("Shutting down on SIGINT...");
 			cancel_token.cancel();
 		},
+		_ = sigterm.recv()
+			=> {
+			println!("Shutting down on SIGTERM (polite quit request)");
+		}
 	};
 
 	task_tracker.wait().await;
