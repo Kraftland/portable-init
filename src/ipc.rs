@@ -41,7 +41,12 @@ impl Init {
 			for (k, v) in extra_files.iter() {
 				map.insert(k.into(), v.into());
 			};
-			self.replacer.add(map).await;
+			match self.replacer.add(map).await {
+				Ok(_)	=> {}
+				Err(e)	=> {
+					return Err(AuxStartError::ReplaceError(format!("{e:#?}")))
+				}
+			};
 		};
 
 
