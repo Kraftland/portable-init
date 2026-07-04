@@ -6,6 +6,7 @@ const INIT_APIVER: u32 = 18;
 struct Init {
 	replacer:	crate::process_env::Replacer,
 	logtx:		tokio::sync::mpsc::Sender<crate::logger::LogMessage>,
+	spawner:	crate::spawn::Spawner,
 }
 
 #[zbus::interface(
@@ -14,17 +15,31 @@ struct Init {
 )]
 impl Init {
 	#[zbus(
-		name = "AuxStart",
+		name = "AuxStart2",
 		out_args("is_stream", "base_directory")
 	)]
 	async fn request_start (
 		&self,
 		custom_target: bool,
-		tray_activate: bool,
-		target_exec: Vec<String>,
+		target_exec: String,
 		arguments: Vec<String>,
 		extra_files: std::collections::HashMap<String, String>,
 	) -> zbus::fdo::Result<(bool, String)> {
+		if extra_files.len() > 0 {
+			let map = std::collections::HashMap::<OsString, OsString>::new();
+			for (k, v) in extra_files.iter() {
+				map.insert(k.into(), v.into());
+			};
+			self.replacer.add(map);
+		};
+
+
+		let mut target: OsString;
+		let mut args: Vec<OsString> = vec![];
+
+		self.spawner.spawn(
+			crate::spawn::SpawnMessage::Start {
+				target: target, args: (), stream: (), reply: (), envs: () });
 
 		// TODO: replace stub
 		Ok((false, "".into()))
@@ -256,6 +271,7 @@ impl IPC {
 		conf: &crate::envs::ConfigOpts,
 		replace_ipc: crate::process_env::Replacer,
 		logtx: tokio::sync::mpsc::Sender<crate::logger::LogMessage>,
+		spawner: crate::spawn::Spawner,
 	) -> Result<Self, BusError> {
 		let conn = zbus::connection::Builder::session();
 		let conn = match conn {
@@ -285,6 +301,7 @@ impl IPC {
 				Init{
 					replacer: replace_ipc,
 					logtx: logtx,
+					spawner: spawner,
 				},
 			).await;
 
