@@ -23,7 +23,7 @@ pub enum SpawnMessage {
 		args:	Vec<OsString>,
 		stream:	bool,
 		reply:	tokio::sync::oneshot::Sender<StartReply>,
-		envs: std::collections::HashMap<OsString, OsString>,
+		envs: Option<std::collections::HashMap<OsString, OsString>>,
 	}
 }
 
@@ -146,10 +146,9 @@ async fn run(
 
 
 					let command = {
-						if envs.len() > 0 {
-							command.envs(envs)
-						} else {
-							&mut command
+						match envs {
+							Some(v)	=> {command.envs(v)}
+							None	=> {&mut command}
 						}
 					};
 					let command = command.args(args_new.iter());
