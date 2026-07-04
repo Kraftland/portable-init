@@ -8,6 +8,9 @@ pub enum SpawnError {
 
 	#[error("Could not locate XDG_RUNTIME_DIR: {0:#?}")]
 	RuntimeDirError(std::env::VarError),
+
+	#[error("Could not bind on socket: {0:?}")]
+	ListenStreamError(),
 }
 
 pub struct Spawner {
@@ -87,6 +90,8 @@ async fn run(
 	base:		std::path::PathBuf,
 ) {
 
+	let count_mu = std::sync::Arc::new(std::sync::Mutex::new(0));
+
 	loop {
 		let msg = tokio::select! {
 			_	= cancel_token.cancelled()	=> {
@@ -100,7 +105,19 @@ async fn run(
 		let cancel_clone = cancel_token.clone();
 		let replacer_clone = replacer.clone();
 		let counter_tx = counter.send_channel.clone();
+		let mut counter_clone = std::sync::Arc::clone(&count_mu);
 		tokio::spawn(async move {
+			{
+				let data = counter_clone.lock();
+				match data {
+					Ok(mut v)	=> {
+						*v+=1;
+					}
+					Err(e)	=> {
+						// TODO: failure handling
+					}
+				};
+			};
 			let msg = match msg {
 				Some(v)	=>	v,
 				None	=>	{return}
@@ -131,6 +148,7 @@ async fn run(
 
 					if stream {
 						// TODO: stream stuff here
+
 					} else {
 
 					};
@@ -146,4 +164,21 @@ async fn run(
 	}
 
 	//std::fs::create_dir(path);
+}
+
+enum SocketType {
+	Stdin,
+	Stdout,
+	Stderr,
+}
+
+// Binds to the specific socket for streaming console
+fn listen_socket_as_fd (
+	base: &std::path::PathBuf,
+	typ: SocketType,
+) -> Result<std::os::fd::OwnedFd, SpawnError> {
+	let sock_path = base.clone();
+	match typ {
+		SocketType::Stdin =>
+	}
 }
