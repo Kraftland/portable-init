@@ -10,7 +10,7 @@ pub enum SpawnError {
 	RuntimeDirError(std::env::VarError),
 
 	#[error("Could not bind on socket: {0:?}")]
-	ListenStreamError(),
+	ListenStreamError(std::io::Error),
 }
 
 pub struct Spawner {
@@ -176,8 +176,24 @@ fn listen_socket_as_fd (
 	base: &std::path::PathBuf,
 	typ: SocketType,
 ) -> Result<std::os::fd::OwnedFd, SpawnError> {
-	let sock_path = base.clone();
-	match typ {
-		SocketType::Stdin =>
-	}
+	let mut sock_path = base.clone();
+	let name = match typ {
+		SocketType::Stdin	=> {"stdin"}
+		SocketType::Stdout	=> {"stdout"}
+		SocketType::Stderr	=> {"stderr"}
+	};
+
+	sock_path.push(name);
+
+	let listener = std::os::unix::net::UnixListener::bind(sock_path);
+
+	let listener = match listener {
+		Ok(v)	=> v,
+		Err(e)	=> {
+			return Err(SpawnError::ListenStreamError(e));
+		}
+	};
+
+	return Ok(std::os::fd::OwnedFd::from(listener))
+
 }
