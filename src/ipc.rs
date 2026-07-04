@@ -365,6 +365,7 @@ impl IPC {
 					replacer: replace_ipc,
 					logtx: logtx,
 					spawner: spawner,
+					conf: conf.clone(),
 				},
 			).await;
 
