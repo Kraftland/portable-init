@@ -142,6 +142,13 @@ async fn run(
 						resp.push(arg.to_owned());
 					};
 				};
+				match responder.send(resp) {
+					Ok(_)	=> {}
+					Err(e)	=> {
+						cancel_token.cancel();
+						panic!("{e:#?}");
+					}
+				};
 			}
 		}
 	}
