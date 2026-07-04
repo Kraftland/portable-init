@@ -131,9 +131,8 @@ async fn run(
 					let args_new = replacer_clone.rewrite(args);
 					let args_new = match args_new.await {
 						Ok(v)	=> {v}
-						Err(_)	=> {
-							// TODO: add logging here
-							return;
+						Err(e)	=> {
+							panic!("{e:#?}");
 						}
 					};
 
