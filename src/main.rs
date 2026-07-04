@@ -289,7 +289,7 @@ async fn main() -> std::process::ExitCode {
 			reply: None,
 			envs: None,
 		}
-	);
+	).await;
 
 
 
