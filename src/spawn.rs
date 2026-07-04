@@ -22,13 +22,14 @@ enum SpawnMessage {
 		target:	OsString,
 		args:	Vec<OsString>,
 		stream:	bool,
-		reply:	tokio::sync::oneshot::Receiver<StartReply>,
+		reply:	tokio::sync::oneshot::Sender<StartReply>,
 		envs: std::collections::HashMap<OsString, OsString>,
 	}
 }
 
+#[derive(Debug)]
 struct StartReply {
-	id:		usize,
+	id:		String,
 	base_dir:	Option<std::path::PathBuf>,
 }
 
@@ -152,7 +153,7 @@ async fn run(
 							*count
 						}.to_string();
 
-						base_clone.push(serial);
+						base_clone.push(&serial);
 
 						std::fs::create_dir_all(&base_clone).unwrap();
 
@@ -174,6 +175,14 @@ async fn run(
 						command.stdin(stdin);
 						command.stdout(stdout);
 						command.stderr(stderr);
+
+						reply.send(
+							StartReply {
+								id: serial,
+								base_dir: Some(base_clone),
+							},
+						).unwrap();
+
 						command
 					} else {
 						command
@@ -182,6 +191,8 @@ async fn run(
 					let mut result = command
 						.spawn()
 						.unwrap();
+
+
 
 					tokio::select! {
 						_ = cancel_clone.cancelled() => {return}
