@@ -144,7 +144,14 @@ async fn run(
 
 					let mut command = tokio::process::Command::new(target);
 
-					let command = command.envs(envs);
+
+					let command = {
+						if envs.len() > 0 {
+							command.envs(envs)
+						} else {
+							&mut command
+						}
+					};
 					let command = command.args(args_new.iter());
 
 					counter_tx.send(
