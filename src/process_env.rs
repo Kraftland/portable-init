@@ -21,9 +21,9 @@ pub enum ReplacerCommand {
 	Add {
 		map: std::collections::HashMap<OsString, OsString>
 	},
-	Remove {
-		origin: Vec<OsString>,
-	},
+	// Remove {
+	// 	origin: Vec<OsString>,
+	// },
 	Rewrite {
 		original_args: Vec<OsString>,
 		responder: tokio::sync::oneshot::Sender<Vec<OsString>>,
@@ -84,18 +84,18 @@ impl Replacer {
 		}
 	}
 
-	pub async fn rm (
-		self: &Self,
-		origins: Vec<OsString>,
-	) -> Result<(), CmdlineReplacerError> {
-		let result = self.tx_query.clone().send(
-			ReplacerCommand::Remove { origin: origins }
-		).await;
-		match result {
-			Ok(_)	=> Ok(()),
-			Err(e)	=> Err(CmdlineReplacerError::SendError(e))
-		}
-	}
+	// pub async fn rm (
+	// 	self: &Self,
+	// 	origins: Vec<OsString>,
+	// ) -> Result<(), CmdlineReplacerError> {
+	// 	let result = self.tx_query.clone().send(
+	// 		ReplacerCommand::Remove { origin: origins }
+	// 	).await;
+	// 	match result {
+	// 		Ok(_)	=> Ok(()),
+	// 		Err(e)	=> Err(CmdlineReplacerError::SendError(e))
+	// 	}
+	// }
 }
 
 async fn run(
@@ -127,11 +127,11 @@ async fn run(
 					mappings.insert(k.into(), v.into());
 				};
 			}
-			ReplacerCommand::Remove { origin } => {
-				for val in origin.iter() {
-					mappings.remove(val);
-				};
-			}
+			// ReplacerCommand::Remove { origin } => {
+			// 	for val in origin.iter() {
+			// 		mappings.remove(val);
+			// 	};
+			// }
 			ReplacerCommand::Rewrite { original_args, responder } => {
 				let mut resp: Vec<OsString> = vec![];
 				for arg in original_args.iter() {
