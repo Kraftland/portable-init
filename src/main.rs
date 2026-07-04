@@ -276,7 +276,7 @@ async fn main() -> std::process::ExitCode {
 		}
 	};
 
-	println!("Starting process...");
+	println!("Starting process {:?} with {:?}...", &config_opts.target, &config_opts.args);
 
 
 

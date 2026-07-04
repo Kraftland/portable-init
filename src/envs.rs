@@ -7,6 +7,9 @@ pub enum EnvsError {
 	#[error("Unrecognised {0:?} environment {1:#?}")]
 	InvalidEnvError(String, String),
 
+	#[error("Unrecognised {0:?} environment {1:#?}")]
+	MalformedEnvError(String, std::env::VarError),
+
 	#[error("Failed to get sandbox ID: {0:#?}")]
 	AppIDError(std::env::VarError),
 
@@ -172,28 +175,41 @@ pub fn get_configurations() -> Result<ConfigOpts, EnvsError> {
 		Err(_) => {}
 	};
 
-	let mut os_args = std::env::args_os();
-	if os_args.len() == 1 {
-		return Err(
-			EnvsError::InvalidArgsError(format!("Missing launch target"))
-		);
-	};
 
-	let _exec_name = os_args.next(); // looks like the first next call returns index 0?
 
-	let target = os_args.next().unwrap();
 
-	let args = {
-		let mut args: Vec<OsString> = vec![];
-		loop {
-			match os_args.next() {
-				Some(v)	=> {args.push(v);}
-				None	=> {break}
+
+	let target = {
+		match std::env::var_os("_portableLaunchTarget") {
+			Some(v)	=> {v}
+			None	=> {
+				return Err(
+					EnvsError::InvalidEnvError(
+						"_portableLaunchTarget".into(),
+						"None".into(),
+					)
+				);
 			}
 		}
-		args
 	};
 
+	let args = {
+		let mut os_args = std::env::args_os();
+		let _exec_name = os_args.next(); // looks like the first next call returns index 0?
+		let mut args: Vec<OsString> = vec![];
+		if os_args.len() > 1 {
+			loop {
+				match os_args.next() {
+					Some(v)	=> {args.push(v);}
+					None	=> {break}
+				}
+			}
+		};
+
+
+
+		args
+	};
 
 	Ok(ConfigOpts {
 		lockdown: is_lockdown,
