@@ -97,7 +97,7 @@ impl Init {
 				target: target,
 				args: args,
 				stream: true,
-				reply: reply_tx,
+				reply: Some(reply_tx),
 				envs: envs_req,
 			}
 		).await;
