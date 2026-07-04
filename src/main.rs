@@ -165,12 +165,14 @@ async fn main() -> std::process::ExitCode {
 
 	let tx_clone = tx.clone();
 	//let cancel_token_clone = cancel_token.clone();
+	let spawner_clone = spawner.clone();
 	let bus_connect_result = tokio::spawn(async move {
 		let tx_clone_2 = tx_clone.clone();
 		let result = ipc::IPC::connect(
 			&conf_clone,
 			replacer_clone,
 			tx_clone_2,
+			spawner_clone,
 		).await;
 		match result {
 			Ok(val)	=> {

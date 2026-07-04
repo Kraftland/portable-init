@@ -13,6 +13,7 @@ pub enum SpawnError {
 	ListenStreamError(std::io::Error),
 }
 
+#[derive(Clone)]
 pub struct Spawner {
 	tx:		tokio::sync::mpsc::Sender<SpawnMessage>,
 }
