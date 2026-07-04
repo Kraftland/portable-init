@@ -7,6 +7,12 @@ struct Init {
 	replacer:	crate::process_env::Replacer,
 	logtx:		tokio::sync::mpsc::Sender<crate::logger::LogMessage>,
 	spawner:	crate::spawn::Spawner,
+	conf:		crate::envs::ConfigOpts,
+}
+
+#[derive(Debug, zbus::DBusError)]
+enum AuxStartError {
+	RecvError(String)
 }
 
 #[zbus::interface(
@@ -16,17 +22,21 @@ struct Init {
 impl Init {
 	#[zbus(
 		name = "AuxStart2",
-		out_args("is_stream", "base_directory")
+		out_args("base_directory")
 	)]
 	async fn request_start (
 		&self,
 		custom_target: bool,
 		target_exec: String,
+		args_append: bool,
 		arguments: Vec<String>,
 		extra_files: std::collections::HashMap<String, String>,
-	) -> zbus::fdo::Result<(bool, String)> {
+		envs: std::collections::HashMap<String, String>,
+	) -> Result<String, AuxStartError> {
+		let mut args: Vec<OsString> = vec![];
+
 		if extra_files.len() > 0 {
-			let map = std::collections::HashMap::<OsString, OsString>::new();
+			let mut map = std::collections::HashMap::<OsString, OsString>::new();
 			for (k, v) in extra_files.iter() {
 				map.insert(k.into(), v.into());
 			};
@@ -34,15 +44,56 @@ impl Init {
 		};
 
 
-		let mut target: OsString;
-		let mut args: Vec<OsString> = vec![];
+		let target: OsString = {
+			if custom_target {
+				target_exec.into()
+			} else {
+				self.conf.target.clone()
+			}
+		};
+
+
+		if args_append {
+			for val in self.conf.args.iter() {
+				args.push(val.clone());
+			};
+		}
+
+
+		let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
+
+		let envs_req = {
+
+			if envs.len() > 0 {
+				let mut map = std::collections::HashMap::<OsString, OsString>::new();
+				for (k, v) in envs {
+					map.insert(k.into(), v.into());
+				}
+				Some(map)
+			} else {
+				None
+			}
+		};
 
 		self.spawner.spawn(
 			crate::spawn::SpawnMessage::Start {
-				target: target, args: (), stream: (), reply: (), envs: () });
+				target: target,
+				args: args,
+				stream: true,
+				reply: reply_tx,
+				envs: envs_req,
+			}
+		);
 
-		// TODO: replace stub
-		Ok((false, "".into()))
+		let reply = reply_rx.await;
+		match reply {
+			Ok(v)	=> {
+				Ok(v.base_dir.unwrap().into_os_string().into_string().unwrap())
+			}
+			Err(e)	=> {
+				Err(AuxStartError::RecvError(format!("{e:#?}")))
+			}
+		}
 	}
 
 	#[zbus(

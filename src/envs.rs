@@ -28,6 +28,9 @@ pub struct ConfigOpts {
 	pub file_map:		std::collections::HashMap<OsString, OsString>,
 
 	pub inhibit:		bool,
+
+	pub target:		OsString,
+	pub args:		Vec<OsString>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
