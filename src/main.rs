@@ -72,12 +72,10 @@ async fn main() -> std::process::ExitCode {
 		);
 	});
 
-	let tx_clone = tx.clone();
 	let cancel_token_clone = cancel_token.clone();
 	let counter_spawn = tokio::spawn(
 		async move {
 			return counter::Counter::new(
-				&tx_clone,
 				cancel_token_clone,
 			).await;
 		},

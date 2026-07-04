@@ -11,12 +11,11 @@ pub enum CounterMessage {
 
 impl Counter {
 	pub async fn new (
-			logtx: &tokio::sync::mpsc::Sender<crate::logger::LogMessage>,
 			cancel_token: tokio_util::sync::CancellationToken,
 	) -> Self {
 		let (tx, rx) = tokio::sync::mpsc::channel::<CounterMessage>(16);
 
-		tokio::spawn(start(rx, logtx, cancel_token));
+		tokio::spawn(start(rx, cancel_token));
 
 		Self { send_channel: tx }
 	}
@@ -24,18 +23,14 @@ impl Counter {
 
 	async fn start (
 			mut receive_chan: tokio::sync::mpsc::Receiver<CounterMessage>,
-			logtx: &tokio::sync::mpsc::Sender<crate::logger::LogMessage>,
 			cancel_token: tokio_util::sync::CancellationToken,
 		) {
 		let startup_result = systemd::daemon::notify(false, vec![("READY", "1")].iter());
 		match startup_result {
 			Ok(_)	=> {}
 			Err(e)	=> {
-				crate::logger::log(
-					&logtx,
-					crate::logger::Loglevel::Warn,
-					format!("Could not set unit status: {e:#?}")).await;
-				return;
+				cancel_token.cancel();
+				panic!("Could not set unit status: {e:#?}");
 			}
 		};
 		let mut count: u128 = 0;
@@ -57,7 +52,6 @@ impl Counter {
 				}
 			}
 			if count == 0 {
-				// TODO: implement stopping logic here
 				cancel_token.cancel();
 
 				let _ = systemd::daemon::notify(
@@ -78,12 +72,7 @@ impl Counter {
 			match result {
 				Ok(_)	=> {}
 				Err(e)	=> {
-					crate::logger::log(
-						&logtx,
-						crate::logger::Loglevel::Warn,
-						format!("Could not set unit status: {e:#?}"),
-					)
-					.await;
+					panic!("Could not set unit status: {e:#?}");
 				}
 			};
 		}
