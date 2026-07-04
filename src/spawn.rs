@@ -17,7 +17,7 @@ pub struct Spawner {
 	tx:		tokio::sync::mpsc::Sender<SpawnMessage>,
 }
 
-enum SpawnMessage {
+pub enum SpawnMessage {
 	Start {
 		target:	OsString,
 		args:	Vec<OsString>,
@@ -34,6 +34,10 @@ struct StartReply {
 }
 
 impl Spawner {
+	pub async fn spawn (self: &Self, msg: SpawnMessage) {
+		self.tx.send(msg).await;
+	}
+
 	pub async fn new(
 		conf: &crate::envs::ConfigOpts,
 		replacer: crate::process_env::Replacer,
