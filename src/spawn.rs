@@ -29,8 +29,7 @@ pub enum SpawnMessage {
 
 #[derive(Debug)]
 struct StartReply {
-	id:		String,
-	base_dir:	Option<std::path::PathBuf>,
+	pub base_dir:	Option<std::path::PathBuf>,
 }
 
 impl Spawner {
@@ -188,7 +187,7 @@ async fn run(
 
 						reply.send(
 							StartReply {
-								id: serial,
+								//id: serial,
 								base_dir: Some(base_clone),
 							},
 						).unwrap();
