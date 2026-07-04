@@ -95,7 +95,7 @@ impl Init {
 				reply: reply_tx,
 				envs: envs_req,
 			}
-		);
+		).await;
 
 		let reply = reply_rx.await;
 		match reply {
