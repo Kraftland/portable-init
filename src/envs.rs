@@ -15,6 +15,9 @@ pub enum EnvsError {
 
 	#[error("Failed to decode _portableHelperExtraFiles: {0:#?}: {1:#?}")]
 	PassFilesError(String, serde_json::Error),
+
+	#[error("Invalid arguments: {0:#?}")]
+	InvalidArgsError(String),
 }
 
 #[derive(Debug, Clone)]
@@ -169,6 +172,29 @@ pub fn get_configurations() -> Result<ConfigOpts, EnvsError> {
 		Err(_) => {}
 	};
 
+	let mut os_args = std::env::args_os();
+	if os_args.len() == 1 {
+		return Err(
+			EnvsError::InvalidArgsError(format!("Missing launch target"))
+		);
+	};
+
+	let _exec_name = os_args.next(); // looks like the first next call returns index 0?
+
+	let target = os_args.next().unwrap();
+
+	let args = {
+		let mut args: Vec<OsString> = vec![];
+		loop {
+			match os_args.next() {
+				Some(v)	=> {args.push(v);}
+				None	=> {break}
+			}
+		}
+		args
+	};
+
+
 	Ok(ConfigOpts {
 		lockdown: is_lockdown,
 		has_flatpak_info: has_info,
@@ -176,5 +202,7 @@ pub fn get_configurations() -> Result<ConfigOpts, EnvsError> {
 		sandbox_id: app_id,
 		file_map: passed_files.file_map,
 		inhibit: has_inhibit,
+		target: target,
+		args: args,
 	})
 }
