@@ -29,13 +29,13 @@ pub enum SpawnMessage {
 }
 
 #[derive(Debug)]
-struct StartReply {
+pub struct StartReply {
 	pub base_dir:	Option<std::path::PathBuf>,
 }
 
 impl Spawner {
 	pub async fn spawn (self: &Self, msg: SpawnMessage) {
-		self.tx.send(msg).await;
+		self.tx.send(msg).await.unwrap();
 	}
 
 	pub async fn new(
