@@ -59,6 +59,14 @@ impl Init {
 			};
 		}
 
+		for val in arguments {
+			args.push(val.into());
+		};
+
+		let args = {
+			self.replacer.rewrite(args)
+		};
+
 
 		let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
 
