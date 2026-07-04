@@ -316,6 +316,7 @@ async fn main() -> std::process::ExitCode {
 		_ = sigterm.recv()
 			=> {
 			println!("Shutting down on SIGTERM (polite quit request)");
+			cancel_token.cancel();
 		}
 	};
 

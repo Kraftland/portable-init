@@ -205,9 +205,6 @@ pub fn get_configurations() -> Result<ConfigOpts, EnvsError> {
 				}
 			}
 		};
-
-
-
 		args
 	};
 
