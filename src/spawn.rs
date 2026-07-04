@@ -23,7 +23,7 @@ pub enum SpawnMessage {
 		target:	OsString,
 		args:	Vec<OsString>,
 		stream:	bool,
-		reply:	tokio::sync::oneshot::Sender<StartReply>,
+		reply:	Option<tokio::sync::oneshot::Sender<StartReply>>,
 		envs: Option<std::collections::HashMap<OsString, OsString>>,
 	}
 }
@@ -186,7 +186,8 @@ async fn run(
 						command.stdout(stdout);
 						command.stderr(stderr);
 
-						reply.send(
+						// unwrap's safe because we should have channels on stream
+						reply.unwrap().send(
 							StartReply {
 								//id: serial,
 								base_dir: Some(base_clone),

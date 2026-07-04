@@ -281,6 +281,16 @@ async fn main() -> std::process::ExitCode {
 
 
 	// TODO: start process
+	spawner.spawn(
+		spawn::SpawnMessage::Start {
+			target: config_opts.target,
+			args: config_opts.args,
+			stream: false,
+			reply: None,
+			envs: None,
+		}
+	);
+
 
 
 
