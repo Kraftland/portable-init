@@ -106,6 +106,7 @@ async fn run(
 		let replacer_clone = replacer.clone();
 		let counter_tx = counter.send_channel.clone();
 		let counter_clone = std::sync::Arc::clone(&count_mu);
+		let mut base_clone = base.clone();
 		tokio::spawn(async move {
 			{
 				let data = counter_clone.lock();
@@ -136,25 +137,60 @@ async fn run(
 						}
 					};
 
-					let mut command = std::process::Command::new(target);
+					let mut command = tokio::process::Command::new(target);
 
 					let command = command.envs(envs);
 					let command = command.args(args_new.iter());
 
 					counter_tx.send(
 						crate::counter::CounterMessage::ProcessStarted,
-					).await;
+					).await.unwrap();
 
-					if stream {
-						// TODO: stream stuff here
+					let command = if stream {
+						let serial = {
+							let count = counter_clone.lock().unwrap();
+							*count
+						}.to_string();
 
+						base_clone.push(serial);
+
+						std::fs::create_dir_all(&base_clone).unwrap();
+
+						let stdin = listen_socket_as_fd(
+							&base_clone,
+							SocketType::Stdin,
+						).unwrap();
+
+						let stdout = listen_socket_as_fd(
+							&base_clone,
+							SocketType::Stdout,
+						).unwrap();
+
+						let stderr = listen_socket_as_fd(
+							&base_clone,
+							SocketType::Stderr,
+						).unwrap();
+
+						command.stdin(stdin);
+						command.stdout(stdout);
+						command.stderr(stderr);
+						command
 					} else {
+						command
+					};
 
+					let mut result = command
+						.spawn()
+						.unwrap();
+
+					tokio::select! {
+						_ = cancel_clone.cancelled() => {return}
+						_ = result.wait() => {}
 					};
 
 					counter_tx.send(
 						crate::counter::CounterMessage::ProcessDied,
-					).await;
+					).await.unwrap();
 
 				}
 			}
