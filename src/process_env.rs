@@ -17,7 +17,7 @@ pub struct Replacer {
 	tx_query: tokio::sync::mpsc::Sender<ReplacerCommand>,
 }
 
-enum ReplacerCommand {
+pub enum ReplacerCommand {
 	Add {
 		map: std::collections::HashMap<OsString, OsString>
 	},
