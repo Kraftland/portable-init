@@ -34,6 +34,23 @@ impl Init {
 		extra_files: std::collections::HashMap<String, String>,
 		envs: std::collections::HashMap<String, String>,
 	) -> Result<zbus::zvariant::OwnedFd, AuxStartError> {
+		{
+			let mut log_msg = String::from("Got start request from D-Bus: ");
+			log_msg.push_str(format!("Custom target: {custom_target}; ").as_str());
+			log_msg.push_str(format!("target: {target_exec}; ").as_str());
+			log_msg.push_str(format!("append arguments: {args_append}; ").as_str());
+			log_msg.push_str(format!("arguments: {arguments:?}; ").as_str());
+			log_msg.push_str(format!("extra files: {extra_files:?}; ").as_str());
+			log_msg.push_str(format!("variables: {envs:?}; ").as_str());
+			crate::logger::log(
+				&self.logtx,
+				crate::logger::Loglevel::Info,
+				log_msg,
+			).await;
+		};
+
+
+
 		let mut args: Vec<OsString> = vec![];
 
 		if extra_files.len() > 0 {
@@ -67,13 +84,6 @@ impl Init {
 
 		for val in arguments {
 			args.push(val.into());
-		};
-
-		let args = match self.replacer.rewrite(args).await {
-			Ok(v)	=> v,
-			Err(e)	=> {
-				return Err(AuxStartError::ReplaceError(format!("{e}:#?")))
-			}
 		};
 
 
