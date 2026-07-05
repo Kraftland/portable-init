@@ -32,6 +32,8 @@ async fn main() -> std::process::ExitCode {
 
 	let tx_clone_compile_syscall = tx.clone();
 	let conf_clone = config_opts.clone();
+
+	let cancel_clone = cancel_token.clone();
 	let seccomp_result = tokio::spawn(async move {
 		let result = seccomp::compile_syscall_list(&tx_clone_compile_syscall);
 		let list = match result {
@@ -65,11 +67,7 @@ async fn main() -> std::process::ExitCode {
 
 		let tx_clone = tx_clone_compile_syscall.clone();
 
-		std::thread::spawn(
-			move || {
-				seccomp::process_seccomp_unotify(fd, &tx_clone);
-			}
-		);
+		tokio::spawn(seccomp::process_seccomp_unotify(fd, tx_clone, cancel_clone));
 	});
 
 	let cancel_token_clone = cancel_token.clone();
@@ -278,11 +276,6 @@ async fn main() -> std::process::ExitCode {
 		}
 	};
 
-	println!("Starting process {:?} with {:?}...", &config_opts.target, &config_opts.args);
-
-
-
-	// TODO: start process
 	spawner.spawn(
 		spawn::SpawnMessage::Start {
 			target: config_opts.target,
