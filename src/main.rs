@@ -235,6 +235,7 @@ async fn main() -> std::process::ExitCode {
 	};
 
 	let spawner_clone = spawner.clone();
+	let conf_clone = config_opts.clone();
 	let bus_connect_result = tokio::spawn(async move {
 		let tx_clone_2 = tx_clone.clone();
 		let result = ipc::IPC::connect(
