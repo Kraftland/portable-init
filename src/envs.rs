@@ -7,9 +7,6 @@ pub enum EnvsError {
 	#[error("Unrecognised {0:?} environment {1:#?}")]
 	InvalidEnvError(String, String),
 
-	#[error("Unrecognised {0:?} environment {1:#?}")]
-	MalformedEnvError(String, std::env::VarError),
-
 	#[error("Failed to get sandbox ID: {0:#?}")]
 	AppIDError(std::env::VarError),
 
@@ -18,9 +15,6 @@ pub enum EnvsError {
 
 	#[error("Failed to decode _portableHelperExtraFiles: {0:#?}: {1:#?}")]
 	PassFilesError(String, serde_json::Error),
-
-	#[error("Invalid arguments: {0:#?}")]
-	InvalidArgsError(String),
 }
 
 #[derive(Debug, Clone)]
