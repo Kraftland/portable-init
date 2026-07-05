@@ -1,5 +1,4 @@
 use thiserror::Error;
-use crate::logger::LogMessage;
 
 #[derive(Error, Debug)]
 pub enum SeccompError {
@@ -223,7 +222,6 @@ pub fn load_seccomp_filter (
 }
 
 pub fn compile_syscall_list(
-	logtx: &tokio::sync::mpsc::Sender<LogMessage>,
 ) -> Result<SyscallList, SyscallCompileError> {
 	struct SyscallByNames {
 		async_io:	Vec<String>, // @aio
@@ -823,7 +821,7 @@ pub fn compile_syscall_list(
 
 	for val in allowed_syscall_group.iter() {
 		for name in val.iter() {
-			let syscall = get_syscall_by_name(&name, logtx);
+			let syscall = get_syscall_by_name(&name);
 			match syscall {
 				Some(val)	=> {
 					allowed_syscalls.push(val);
@@ -835,7 +833,7 @@ pub fn compile_syscall_list(
 
 	for val in denied_syscall_group.iter() {
 		for name in val.iter() {
-			let syscall = get_syscall_by_name(&name, logtx);
+			let syscall = get_syscall_by_name(&name);
 			match syscall {
 				Some(val)	=> {
 					denied_syscalls.push(val);
@@ -847,7 +845,7 @@ pub fn compile_syscall_list(
 
 	for val in debug_syscall_group.iter() {
 		for name in val.iter() {
-			let syscall = get_syscall_by_name(&name, logtx);
+			let syscall = get_syscall_by_name(&name);
 			match syscall {
 				Some(val)	=> {
 					debug_syscalls.push(val);
@@ -859,7 +857,7 @@ pub fn compile_syscall_list(
 
 	for val in lockdown_syscall_group.iter() {
 		for name in val.iter() {
-			let syscall = get_syscall_by_name(&name, logtx);
+			let syscall = get_syscall_by_name(&name);
 			match syscall {
 				Some(val)	=> {
 					lockdown_syscalls.push(val);
@@ -876,16 +874,15 @@ pub fn compile_syscall_list(
 		selective: lockdown_syscalls,
 	};
 
-	crate::logger::log_sync(
-		logtx,
-		crate::logger::Loglevel::Debug,
+	crate::logger::log_debug(
 		format!(
 			"{} allowed syscalls, {} denied syscalls, {} debug syscalls and {} lockdown syscalls",
 			ret.allow_list.len(),
 			ret.deny_list.len(),
 			ret.debug_list.len(),
 			ret.selective.len(),
-		));
+		)
+	);
 
 	Ok(ret)
 
@@ -893,16 +890,14 @@ pub fn compile_syscall_list(
 
 fn get_syscall_by_name(
 	name: &String,
-	logtx: &tokio::sync::mpsc::Sender<LogMessage>,
 ) -> Option<libseccomp::ScmpSyscall> {
 	let result = libseccomp::ScmpSyscall::from_name(name);
 	match result {
 		Ok(val)	=>	Some(val),
 		Err(e)	=>	{
-			crate::logger::log_sync(
-				logtx,
-				crate::logger::Loglevel::Debug,
-				format!("Could not resolve syscall from name {name}: {e:#?}"));
+			crate::logger::log_debug(
+				format!("Could not resolve syscall from name {name}: {e:#?}")
+			);
 			None
 		}
 	}

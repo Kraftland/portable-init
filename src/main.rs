@@ -8,32 +8,29 @@ mod spawn;
 mod counter;
 mod ipc;
 mod process_env;
+mod inhibit;
 
 #[tokio::main]
 async fn main() -> std::process::ExitCode {
-	let (tx, rx) = mpsc::channel::<logger::LogMessage>(128);
 	let cancel_token = tokio_util::sync::CancellationToken::new();
 	let task_tracker = tokio_util::task::TaskTracker::new();
 
 	let cancel_token_clone = cancel_token.clone();
 	let replacer_spawn = tokio::spawn(process_env::Replacer::new(cancel_token_clone));
 
-	let cancel_token_clone = cancel_token.clone();
-	let _ = tokio::spawn(logger::logg_worker(rx, cancel_token_clone));
 
 	let config_opts = {
 		match envs::get_configurations() {
 			Ok(conf) => conf,
 			Err(e) => {
-				logger::log(&tx, logger::Loglevel::Fatal, format!("{e}:?")).await;
+				logger::log_fatal(format!("{e}:?"));
 				return std::process::ExitCode::FAILURE;
 			}
 		}
 	};
 
-	let tx_clone = tx.clone();
 	let seccomp_result = tokio::spawn(async move {
-		match seccomp::compile_syscall_list(&tx_clone) {
+		match seccomp::compile_syscall_list() {
 			Ok(v)	=> v,
 			Err(e)	=> {
 				logger::log(
