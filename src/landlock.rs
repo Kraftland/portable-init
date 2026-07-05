@@ -22,8 +22,6 @@ pub enum LandlockError {
 	ApplyStatusError(String),
 	#[error("Unable to determine home")]
 	UserHomeUnknownError,
-	#[error("Unable to clone landlock rule-set: {0:#?}")]
-	CloneError(std::io::Error),
 }
 
 struct DefinedRules {
