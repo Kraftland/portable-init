@@ -31,7 +31,6 @@ pub struct SyscallList {
 
 pub async fn process_seccomp_unotify (
 	fd: libseccomp::ScmpFd,
-	logtx: tokio::sync::mpsc::Sender<LogMessage>,
 	cancel_token: tokio_util::sync::CancellationToken,
 ) {
 
@@ -42,25 +41,14 @@ pub async fn process_seccomp_unotify (
 		if cancel_token.is_cancelled() {
 			return
 		}
-		//println!("Started unotify watcher");
 		let request = libseccomp::ScmpNotifReq::receive(fd);
 		let request = match request {
 			Ok(val)	=> val,
 			Err(e)	=> {
-				crate::logger::log(
-					&logtx,
-					crate::logger::Loglevel::Fatal,
-					format!("Could not receive seccomp notification: {e:#?}"),
-				).await;
+				eprintln!("Could not receive seccomp notification: {e:#?}");
 				return
 			}
 		};
-
-		crate::logger::log(
-			&logtx,
-			crate::logger::Loglevel::Debug,
-			format!("Processing seccomp unotify from {}", request.pid),
-		).await;
 
 		let syscall_name = request.data.syscall.get_name();
 		let syscall_name = match syscall_name {
@@ -69,15 +57,12 @@ pub async fn process_seccomp_unotify (
 				format!("unresolved syscall ({:#?})", e)
 			}
 		};
-		crate::logger::log(
-			&logtx,
-			crate::logger::Loglevel::Warn,
-			format!(
-				"PID {} performed illegal system call {}",
-				request.id,
-				syscall_name,
-			),
-		).await;
+
+		println!(
+				"\x1b[38;2;255;209;59m[Init]\x1b[0m: PID {} performed illegal system call {}",
+				&request.pid,
+				&syscall_name,
+		);
 
 		let response = libseccomp::ScmpNotifResp::new_error(
 			request.id,
@@ -87,13 +72,7 @@ pub async fn process_seccomp_unotify (
 		match response.respond(fd) {
 			Ok(_)	=> {},
 			Err(e)	=> {
-				crate::logger::log(
-					&logtx,
-					crate::logger::Loglevel::Warn,
-					format!(
-						"Error filtering syscall: {e:#?}",
-					),
-				).await;
+				eprintln!("Could not filter system call: {e:#?}")
 			},
 		}
 	}

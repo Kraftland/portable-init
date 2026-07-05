@@ -70,8 +70,8 @@ pub async fn logg_worker(
 
 #[derive(Debug)]
 pub struct LogMessage {
-	level:		Loglevel,
-	message:	String,
+	pub level:		Loglevel,
+	pub message:	String,
 }
 
 #[derive(Debug)]
@@ -85,9 +85,9 @@ pub enum Loglevel {
 pub async fn log(tx: &tokio::sync::mpsc::Sender<LogMessage>, level: Loglevel, msg: String) {
 	let tx_new = tx.clone();
 	tx_new.send(LogMessage{
-			level:		level,
-			message:	msg,
-		}).await.unwrap();
+		level:		level,
+		message:	msg,
+	}).await.unwrap();
 }
 
 pub fn log_sync(tx: &tokio::sync::mpsc::Sender<LogMessage>, level: Loglevel, msg: String) {
