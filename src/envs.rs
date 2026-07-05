@@ -40,7 +40,7 @@ struct PassFiles {
 
 fn get_pass_files_env() -> Result<PassFiles, EnvsError> {
 	let files_json = std::env::var("_portableHelperExtraFiles");
-	let files_map: std::collections::HashMap<String,String> = std::collections::HashMap::new();
+	let mut files_map: std::collections::HashMap<String,String> = std::collections::HashMap::new();
 	let files_json = match files_json {
 		Ok(val)	=> val,
 		Err(e)	=> {
@@ -57,7 +57,15 @@ fn get_pass_files_env() -> Result<PassFiles, EnvsError> {
 	};
 	let deserialised: Result<PassFiles, serde_json::Error> = serde_json::from_str(&files_json);
 	match deserialised {
-		Ok(val)	=> Ok(val),
+		Ok(val)	=> {
+			for (k, v) in val.file_map {
+				if v == "unknown" {
+					continue
+				}
+				files_map.insert(k, v);
+			};
+			Ok(PassFiles { file_map: files_map })
+		},
 		Err(e)	=> {
 			Err(EnvsError::PassFilesError(files_json, e))
 		}
