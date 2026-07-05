@@ -141,6 +141,7 @@ async fn main() -> std::process::ExitCode {
 		}
 	};
 
+	let tx_clone = tx.clone();
 	let spawner = {
 		let cancel_clone = cancel_token.clone();
 		let spawner = spawn::Spawner::new(
@@ -148,6 +149,7 @@ async fn main() -> std::process::ExitCode {
 			replacer,
 			cancel_clone,
 			counter,
+			tx_clone,
 		);
 		match spawner.await {
 			Ok(v)	=> v,

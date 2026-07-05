@@ -15,6 +15,7 @@ pub struct Spawner {
 	tx:		tokio::sync::mpsc::Sender<SpawnMessage>,
 }
 
+#[derive(Debug)]
 pub enum SpawnMessage {
 	Start {
 		target:	OsString,
@@ -41,6 +42,7 @@ impl Spawner {
 		replacer: crate::process_env::Replacer,
 		cancel_token: tokio_util::sync::CancellationToken,
 		counter: crate::counter::Counter,
+		logtx: tokio::sync::mpsc::Sender<crate::logger::LogMessage>,
 	) -> Result<Self, SpawnError> {
 		let (tx, rx) = tokio::sync::mpsc::channel::<SpawnMessage>(5);
 
@@ -76,6 +78,7 @@ impl Spawner {
 				rx,
 				counter,
 				stream_path,
+				logtx,
 			),
 		);
 
@@ -91,6 +94,7 @@ async fn run(
 	mut rx:		tokio::sync::mpsc::Receiver<SpawnMessage>,
 	counter:	crate::counter::Counter,
 	base:		std::path::PathBuf,
+	logtx:		tokio::sync::mpsc::Sender<crate::logger::LogMessage>,
 ) {
 
 	let count_mu = std::sync::Arc::new(std::sync::Mutex::new(0));
@@ -110,6 +114,9 @@ async fn run(
 		let counter_tx = counter.send_channel.clone();
 		let counter_clone = std::sync::Arc::clone(&count_mu);
 		let mut base_clone = base.clone();
+
+		let logtx_clone = logtx.clone();
+
 		tokio::spawn(async move {
 			{
 				let data = counter_clone.lock();
@@ -127,6 +134,12 @@ async fn run(
 				None	=>	{return}
 			};
 
+			crate::logger::log(
+				&logtx_clone,
+				crate::logger::Loglevel::Debug,
+				format!("Spawning process {msg:?}"),
+			).await;
+
 			match msg {
 				SpawnMessage::Start { target, args, stream, reply, envs } => {
 					if cancel_clone.is_cancelled() {
@@ -141,9 +154,6 @@ async fn run(
 					};
 
 					let mut command = tokio::process::Command::new(target);
-					//let mut command = portable_pty::CommandBuilder::new(target);
-
-
 					let command = {
 						match envs {
 							Some(v)	=> {command.envs(v)}
