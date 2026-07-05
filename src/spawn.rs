@@ -41,7 +41,6 @@ impl Spawner {
 		replacer: crate::process_env::Replacer,
 		cancel_token: tokio_util::sync::CancellationToken,
 		counter: crate::counter::Counter,
-		logtx: tokio::sync::mpsc::Sender<crate::logger::LogMessage>,
 		landlock_rules: landlock::RulesetCreated,
 		seccomp_list: crate::seccomp::SyscallList,
 	) -> Result<Self, SpawnError> {
@@ -79,7 +78,6 @@ impl Spawner {
 				rx,
 				counter,
 				stream_path,
-				logtx,
 				landlock_rules,
 				seccomp_list,
 				conf.clone(),
@@ -98,7 +96,6 @@ async fn run(
 	mut rx:		tokio::sync::mpsc::Receiver<SpawnMessage>,
 	counter:	crate::counter::Counter,
 	base:		std::path::PathBuf,
-	logtx:		tokio::sync::mpsc::Sender<crate::logger::LogMessage>,
 	landlock_rules:	landlock::RulesetCreated,
 	seccomp_list:	crate::seccomp::SyscallList,
 	conf:		crate::envs::ConfigOpts,
@@ -122,7 +119,6 @@ async fn run(
 		let counter_clone = std::sync::Arc::clone(&count_mu);
 		let mut base_clone = base.clone();
 
-		let logtx_clone = logtx.clone();
 		let landlock_rules_clone = landlock_rules.try_clone().unwrap();
 		let seccomp_list = seccomp_list.clone();
 		let conf_clone = conf.clone();
@@ -158,11 +154,9 @@ async fn run(
 				) {
 					Ok(v)	=> {v}
 					Err(e)	=> {
-						crate::logger::log(
-							&logtx_clone,
-							crate::logger::Loglevel::Fatal,
+						crate::logger::log_fatal(
 							format!("Could not load seccomp filter: {e:#?}"),
-						).await;
+						);
 						panic!("Could not load seccomp filter: {e:#?}");
 					}
 				};
@@ -181,18 +175,12 @@ async fn run(
 				if conf.lockdown {
 					match crate::landlock::load_landlock(landlock_rules_clone) {
 					Ok(_)	=> {
-						crate::logger::log(
-							&logtx_clone,
-							crate::logger::Loglevel::Debug,
-							format!("Loaded landlock rules"),
-						).await;
+						crate::logger::log_debug("Loaded landlock rules".into());
 					}
 					Err(e)	=> {
-						crate::logger::log(
-							&logtx_clone,
-							crate::logger::Loglevel::Fatal,
+						crate::logger::log_fatal(
 							format!("Could not load landlock rules: {e:#?}"),
-						).await;
+						);
 					}
 					};
 				}
@@ -203,12 +191,6 @@ async fn run(
 				Some(v)	=>	v,
 				None	=>	{return}
 			};
-
-			crate::logger::log(
-				&logtx_clone,
-				crate::logger::Loglevel::Debug,
-				format!("Spawning process: {msg:?}"),
-			).await;
 
 			match msg {
 				SpawnMessage::Start { target, args, stream, reply, envs } => {
@@ -280,19 +262,13 @@ async fn run(
 						command
 					};
 
-					crate::logger::log(
-						&logtx_clone,
-						crate::logger::Loglevel::Debug,
+					crate::logger::log_debug(
 						format!("Constructed command: {command:?}"),
-					).await;
-
-					//std::thread::sleep(std::time::Duration::from_secs(5));
+					);
 
 					let mut result = command
 						.spawn()
 						.unwrap();
-
-
 
 					tokio::select! {
 						_ = cancel_clone.cancelled() => {return}
@@ -302,12 +278,8 @@ async fn run(
 					counter_tx.send(
 						crate::counter::CounterMessage::ProcessDied,
 					).await.unwrap();
-
 				}
 			}
 		});
-
 	}
-
-	//std::fs::create_dir(path);
 }
