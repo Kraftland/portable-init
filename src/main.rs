@@ -168,6 +168,21 @@ async fn main() -> std::process::ExitCode {
 		}
 	};
 
+	let seccomp_list = {
+		match seccomp_result.await {
+			Ok(v)	=> {v}
+			Err(e)	=> {
+				logger::log(
+					&tx,
+					logger::Loglevel::Fatal,
+					format!("Could not contact replacer: {e:#?}"),
+				).await;
+				std::thread::sleep(std::time::Duration::from_secs(5));
+				panic!("{e:#?}");
+			}
+		}
+	};
+
 	let tx_clone = tx.clone();
 	let conf_clone = config_opts.clone();
 	let spawner = {
@@ -179,6 +194,7 @@ async fn main() -> std::process::ExitCode {
 			counter,
 			tx_clone,
 			landlock_rules,
+			seccomp_list,
 		);
 		match spawner.await {
 			Ok(v)	=> v,

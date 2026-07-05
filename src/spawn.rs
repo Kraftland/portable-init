@@ -43,6 +43,7 @@ impl Spawner {
 		counter: crate::counter::Counter,
 		logtx: tokio::sync::mpsc::Sender<crate::logger::LogMessage>,
 		landlock_rules: landlock::RulesetCreated,
+		seccomp_list: crate::seccomp::SyscallList,
 	) -> Result<Self, SpawnError> {
 		let (tx, rx) = tokio::sync::mpsc::channel::<SpawnMessage>(5);
 
@@ -80,6 +81,8 @@ impl Spawner {
 				stream_path,
 				logtx,
 				landlock_rules,
+				seccomp_list,
+				conf.clone(),
 			),
 		);
 
@@ -97,6 +100,8 @@ async fn run(
 	base:		std::path::PathBuf,
 	logtx:		tokio::sync::mpsc::Sender<crate::logger::LogMessage>,
 	landlock_rules:	landlock::RulesetCreated,
+	seccomp_list:	crate::seccomp::SyscallList,
+	conf:		crate::envs::ConfigOpts,
 ) {
 
 	let count_mu = std::sync::Arc::new(std::sync::Mutex::new(0));
@@ -119,6 +124,8 @@ async fn run(
 
 		let logtx_clone = logtx.clone();
 		let landlock_rules_clone = landlock_rules.try_clone().unwrap();
+		let seccomp_list = seccomp_list.clone();
+		let conf_clone = conf.clone();
 
 		tokio::spawn(async move {
 			{
@@ -137,8 +144,40 @@ async fn run(
 			};
 
 			{
-				let result = crate::landlock::load_landlock(landlock_rules_clone);
-				match result {
+				let filter = match crate::seccomp::compile_filter(
+					&conf_clone,
+					&seccomp_list,
+				) {
+					Ok(v)	=> v,
+					Err(e)	=> {
+						panic!("Could not compile seccomp filter: {e:#?}");
+					}
+				};
+				let fd = match crate::seccomp::load_seccomp_filter(
+					filter,
+				) {
+					Ok(v)	=> {v}
+					Err(e)	=> {
+						crate::logger::log(
+							&logtx_clone,
+							crate::logger::Loglevel::Fatal,
+							format!("Could not load seccomp filter: {e:#?}"),
+						).await;
+						panic!("Could not load seccomp filter: {e:#?}");
+					}
+				};
+				tokio::spawn(
+					crate::seccomp::process_seccomp_unotify(
+						fd,
+						logtx_clone.clone(),
+						cancel_clone.clone(),
+					),
+				)
+			};
+
+			{
+				if conf.lockdown {
+					match crate::landlock::load_landlock(landlock_rules_clone) {
 					Ok(_)	=> {
 						crate::logger::log(
 							&logtx_clone,
@@ -153,7 +192,8 @@ async fn run(
 							format!("Could not load landlock rules: {e:#?}"),
 						).await;
 					}
-				};
+					};
+				}
 			};
 
 
