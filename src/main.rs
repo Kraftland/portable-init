@@ -46,10 +46,8 @@ async fn main() -> std::process::ExitCode {
 					logger::log(
 						&tx_clone,
 						logger::Loglevel::Warn,
-						format!("Could not compile landlock rules: {e:#?}"),
+						format!("Could not set uclamp: {e:#?}"),
 					).await;
-					std::thread::sleep(std::time::Duration::from_secs(5));
-					panic!("Could not compile landlock rules: {e:#?}")
 				}
 			};
 		}
