@@ -8,9 +8,6 @@ pub enum SpawnError {
 
 	#[error("Could not locate XDG_RUNTIME_DIR: {0:#?}")]
 	RuntimeDirError(std::env::VarError),
-
-	#[error("Could not bind on socket: {0:?}")]
-	ListenStreamError(std::io::Error),
 }
 
 #[derive(Clone)]
@@ -223,10 +220,4 @@ async fn run(
 	}
 
 	//std::fs::create_dir(path);
-}
-
-enum SocketType {
-	Stdin,
-	Stdout,
-	Stderr,
 }
