@@ -31,6 +31,21 @@ async fn main() -> std::process::ExitCode {
 		}
 	};
 
+	let landlock_result = tokio::spawn(async {
+		match landlock::compile_landlock_rules(&config_opts).await {
+			Ok(v)	=> v,
+			Err(e)	=> {
+				logger::log(
+					&tx,
+					logger::Loglevel::Fatal,
+					format!("Could not compile landlock rules: {e:#?}"),
+				).await;
+				std::thread::sleep(std::time::Duration::from_secs(5));
+				panic!("Could not compile landlock rules: {e:#?}")
+			}
+		}
+	});
+
 	let tx_clone_compile_syscall = tx.clone();
 	let conf_clone = config_opts.clone();
 
