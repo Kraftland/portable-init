@@ -73,10 +73,16 @@ impl DefinedRules {
 	}
 }
 
-pub fn load_landlock (conf: &crate::envs::ConfigOpts) -> Result<(), LandlockError> {
-	let defined_rules = DefinedRules::get(&conf.has_flatpak_info)?;
-
-
+pub async fn compile_landlock_rules (conf: &crate::envs::ConfigOpts) -> Result<landlock::RulesetCreated, LandlockError> {
+	let defined_rules = DefinedRules::get(&conf.has_flatpak_info);
+	let defined_rules = match defined_rules {
+		Ok(v)	=>	v,
+		Err(e)	=> 	{
+			return Err(
+				e
+			)
+		}
+	};
 	enum LandlockFsAccess {
 		Full,
 		Directory, // Does not include MakeChar, MakeBlock, IoctlDev
@@ -169,12 +175,18 @@ pub fn load_landlock (conf: &crate::envs::ConfigOpts) -> Result<(), LandlockErro
 			landlock::make_bitflags!(AccessFs::ReadDir),
 		),
 	);
-	let rule_set = match result {
-		Ok(val)	=> val,
+	match result {
+		Ok(val)	=> Ok(val),
 		Err(e)	=> {
 			return Err(LandlockError::AddRulesError(e));
 		}
-	};
+	}
+}
+
+pub fn load_landlock (conf: &crate::envs::ConfigOpts, rules: &DefinedRules) -> Result<(), LandlockError> {
+
+
+
 
 	let _scope = landlock::Scope::from(landlock::Scope::Signal);
 
@@ -204,3 +216,4 @@ pub fn load_landlock (conf: &crate::envs::ConfigOpts) -> Result<(), LandlockErro
 		}
 	}
 }
+
