@@ -4,7 +4,6 @@ const INIT_APIVER: u32 = 18;
 
 struct Init {
 	replacer:	crate::process_env::Replacer,
-	logtx:		tokio::sync::mpsc::Sender<crate::logger::LogMessage>,
 	spawner:	crate::spawn::Spawner,
 	conf:		crate::envs::ConfigOpts,
 }
@@ -41,11 +40,7 @@ impl Init {
 			log_msg.push_str(format!("arguments: {arguments:?}; ").as_str());
 			log_msg.push_str(format!("extra files: {extra_files:?}; ").as_str());
 			log_msg.push_str(format!("variables: {envs:?}; ").as_str());
-			crate::logger::log(
-				&self.logtx,
-				crate::logger::Loglevel::Info,
-				log_msg,
-			).await;
+			crate::logger::log_debug(log_msg);
 		};
 
 
@@ -140,11 +135,9 @@ impl Init {
 		let files = match files {
 			Ok(v)	=> v,
 			Err(e)	=> {
-				crate::logger::log(
-					&self.logtx,
-					crate::logger::Loglevel::Warn,
-					format!("Could not request filesystem access: {e:#?}")
-				).await;
+				crate::logger::log_warn(
+					format!("Could not request filesystem access: {e:#?}"),
+				);
 				return
 			},
 		};
@@ -152,11 +145,9 @@ impl Init {
 		let files = match files.response() {
 			Ok(v)	=> v,
 			Err(e)	=> {
-				crate::logger::log(
-					&self.logtx,
-					crate::logger::Loglevel::Warn,
-					format!("Could not request filesystem access: {e:#?}")
-				).await;
+				crate::logger::log_warn(
+					format!("Could not request filesystem access: {e:#?}"),
+				);
 				return
 			},
 		};
@@ -171,35 +162,21 @@ impl Init {
 					selected_paths.push(v.to_string());
 				}
 				None	=> {
-					crate::logger::log(
-						&self.logtx,
-						crate::logger::Loglevel::Warn,
-						format!(
-						"Error decoding Portal response: file:// prefix not found",
-						)
-					).await;
+					crate::logger::log_warn(
+						"Error decoding Portal response: file:// prefix not found".into(),
+					);
 					return;
 				}
 			}
 		};
 
-		crate::logger::log(
-			&self.logtx,
-			crate::logger::Loglevel::Debug,
-			format!("Got response from portal: {selected_paths:?}"),
-		).await;
+		crate::logger::log_debug(format!("Got response from portal: {selected_paths:?}"));
 
 		let home = std::env::home_dir();
 		let home = match home {
 			Some(v)	=>	v,
 			None	=>	{
-				crate::logger::log(
-					&self.logtx,
-					crate::logger::Loglevel::Warn,
-					format!(
-						"Could not locate $HOME",
-					)
-				).await;
+				crate::logger::log_warn("Could not locate $HOME".into());
 				return;
 			}
 		};
@@ -211,13 +188,11 @@ impl Init {
 		match result {
 			Ok(_)	=> {},
 			Err(e)	=> {
-				crate::logger::log(
-					&self.logtx,
-					crate::logger::Loglevel::Warn,
+				crate::logger::log_warn(
 					format!(
 						"Could not create shared directory: {e:#?}",
-					)
-				).await;
+					),
+				);
 				return;
 			}
 		}
@@ -231,25 +206,17 @@ impl Init {
 			let file_name = match file_name {
 				Some(v)	=> {v}
 				None	=> {
-					crate::logger::log(
-						&self.logtx,
-						crate::logger::Loglevel::Warn,
-						format!(
-						"Could not resolve file path for: {source:#?}",
-						)
-					).await;
+					crate::logger::log_warn(
+						format!("Could not resolve file path for: {source:#?}"),
+					);
 					continue;
 				}
 			};
 			dest.push(file_name);
 
-			crate::logger::log(
-				&self.logtx,
-				crate::logger::Loglevel::Debug,
-				format!(
-					"Linking {dest:?} to {source:?}",
-				),
-			).await;
+			crate::logger::log_debug(
+				format!("Linking {dest:?} to {source:?}"),
+			);
 
 			let result = std::os::unix::fs::symlink(
 				&source,
@@ -258,13 +225,9 @@ impl Init {
 			match result {
 				Ok(_)	=> {}
 				Err(e)	=> {
-					crate::logger::log(
-						&self.logtx,
-						crate::logger::Loglevel::Warn,
-						format!(
-						"Could not link shared file: {e:#?}",
-						)
-					).await;
+					crate::logger::log_warn(
+						format!("Could not link shared file: {e:#?}"),
+					);
 					continue;
 				}
 			};
@@ -277,13 +240,9 @@ impl Init {
 		match result {
 			Ok(_)	=> {}
 			Err(e)	=> {
-				crate::logger::log(
-					&self.logtx,
-					crate::logger::Loglevel::Warn,
-					format!(
-					"Could not contact replacer: {e:#?}",
-					)
-				).await;
+				crate::logger::log_warn(
+					format!("Could not contact replacer: {e:#?}")
+				);
 			}
 		}
 	}
@@ -346,7 +305,6 @@ impl IPC {
 	pub async fn connect(
 		conf: &crate::envs::ConfigOpts,
 		replace_ipc: crate::process_env::Replacer,
-		logtx: tokio::sync::mpsc::Sender<crate::logger::LogMessage>,
 		spawner: crate::spawn::Spawner,
 	) -> Result<Self, BusError> {
 		let conn = zbus::connection::Builder::session();
@@ -376,7 +334,6 @@ impl IPC {
 				"/top/kimiblock/portable/init",
 				Init{
 					replacer: replace_ipc,
-					logtx: logtx,
 					spawner: spawner,
 					conf: conf.clone(),
 				},
