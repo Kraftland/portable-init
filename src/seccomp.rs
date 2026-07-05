@@ -272,6 +272,7 @@ pub fn compile_syscall_list(
 		setuid:		Vec<String>,
 		signal:		Vec<String>,
 		timer:		Vec<String>,
+		sandbox:	Vec<String>,
 		other:		Vec<String>, // uncategorised, always allowed syscalls
 	}
 
@@ -678,6 +679,12 @@ pub fn compile_syscall_list(
 			"timerfd_settime64".into(),
 			"times".into(),
 		],
+		sandbox: vec![
+			"landlock_add_rule".into(),
+			"landlock_create_ruleset".into(),
+			"landlock_restrict_self".into(),
+			"seccomp".into(),
+		],
 		other: vec![
 			"arch_prctl".into(),
 			"brk".into(),
@@ -801,6 +808,7 @@ pub fn compile_syscall_list(
 		syscall_by_names.process,
 		syscall_by_names.signal,
 		syscall_by_names.timer,
+		syscall_by_names.sandbox,
 		syscall_by_names.other,
 	];
 	let denied_syscall_group: Vec<Vec<String>> = vec![
