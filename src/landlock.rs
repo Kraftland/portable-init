@@ -22,6 +22,8 @@ pub enum LandlockError {
 	ApplyStatusError(String),
 	#[error("Unable to determine home")]
 	UserHomeUnknownError,
+	#[error("Unable to clone landlock rule-set: {0:#?}")]
+	CloneError(std::io::Error),
 }
 
 struct DefinedRules {
@@ -183,10 +185,14 @@ pub async fn compile_landlock_rules (conf: &crate::envs::ConfigOpts) -> Result<l
 	}
 }
 
-pub fn load_landlock (conf: &crate::envs::ConfigOpts, rules: &DefinedRules) -> Result<(), LandlockError> {
-
-
-
+pub fn load_landlock (rule: &landlock::RulesetCreated) -> Result<(), LandlockError> {
+	let rule_set = rule.try_clone();
+	let rule_set = match rule_set {
+		Ok(v)	=> {v}
+		Err(e)	=> {
+			return Err(LandlockError::CloneError(e));
+		}
+	};
 
 	let _scope = landlock::Scope::from(landlock::Scope::Signal);
 
