@@ -173,13 +173,13 @@ pub fn get_configurations() -> Result<ConfigOpts, EnvsError> {
 
 
 	let target = {
-		match std::env::var_os("_portableLaunchTarget") {
-			Some(v)	=> {v}
-			None	=> {
+		match std::env::var("_portableLaunchTarget") {
+			Ok(v)	=> {v}
+			Err(e)	=> {
 				return Err(
 					EnvsError::InvalidEnvError(
 						"_portableLaunchTarget".into(),
-						"None".into(),
+						format!("{e:#?}"),
 					)
 				);
 			}
