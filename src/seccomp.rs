@@ -57,10 +57,13 @@ pub async fn process_seccomp_unotify (
 			}
 		};
 
-		println!(
-				"\x1b[38;2;255;209;59m[Init]\x1b[0m: PID {} performed illegal system call {}",
+		crate::logger::log_warn(
+			format!(
+				"PID {} performed illegal operation: {} on architecture {:?}",
 				&request.pid,
-				&syscall_name,
+				syscall_name,
+				&request.data.arch,
+			)
 		);
 
 		let response = libseccomp::ScmpNotifResp::new_error(
