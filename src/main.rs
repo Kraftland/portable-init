@@ -137,53 +137,6 @@ async fn main() -> std::process::ExitCode {
 		}
 	};
 
-	let tx_landlock_clone = tx.clone();
-	let conf_clone = config_opts.clone();
-	let landlock_spawn = tokio::spawn(
-		async move {
-			let result = uclamp::apply_uclamp();
-			match result {
-				Ok(val)	=> {
-					logger::log(
-						&tx_landlock_clone,
-						logger::Loglevel::Debug,
-						format!("Successfully set uclamp.max to: {val:?}"),
-					).await;
-				}
-				Err(e)	=> {
-					logger::log(
-						&tx_landlock_clone,
-						logger::Loglevel::Warn,
-						format!("Could not set uclamp limits: {e:#?}"),
-					).await;
-				}
-			}
-
-			let raw_env = std::env::var("_portableLockdown");
-			match raw_env {
-				Ok(_)	=> {}
-				Err(_)	=> {return}
-			};
-			let result = landlock::load_landlock(&conf_clone);
-			match result {
-				Ok(()) => {
-					logger::log(
-						&tx_landlock_clone,
-						logger::Loglevel::Debug,
-						format!("Loaded landlock rules"),
-					).await;
-				}
-				Err(e) => {
-					logger::log(
-						&tx_landlock_clone,
-						logger::Loglevel::Fatal,
-						format!("Could not load landlock: {e:#?}"),
-					).await;
-				}
-			}
-		}
-	);
-
 	match seccomp_result.await {
 		Ok(())	=> {}
 		Err(e)	=> {
