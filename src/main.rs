@@ -32,6 +32,22 @@ async fn main() -> std::process::ExitCode {
 	};
 
 	let tx_clone = tx.clone();
+	let seccomp_result = tokio::spawn(async move {
+		match seccomp::compile_syscall_list(&tx_clone) {
+			Ok(v)	=> v,
+			Err(e)	=> {
+				logger::log(
+					&tx_clone,
+					logger::Loglevel::Fatal,
+					format!("Could not compile seccomp list: {e:#?}"),
+				).await;
+				std::thread::sleep(std::time::Duration::from_secs(5));
+				panic!("Could not compile seccomp list: {e:#?}")
+			}
+		}
+	});
+
+	let tx_clone = tx.clone();
 	let uclamp_result = tokio::spawn(
 		async move {
 			match uclamp::apply_uclamp() {
@@ -69,11 +85,6 @@ async fn main() -> std::process::ExitCode {
 			}
 		}
 	});
-
-	let tx_clone_compile_syscall = tx.clone();
-	let conf_clone = config_opts.clone();
-
-	let cancel_clone = cancel_token.clone();
 
 	let cancel_token_clone = cancel_token.clone();
 	let counter_spawn = tokio::spawn(

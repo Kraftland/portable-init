@@ -101,7 +101,7 @@ pub async fn process_seccomp_unotify (
 	}
 }
 
-pub fn compile_filter (
+pub async fn compile_filter (
 	config_env: &crate::envs::ConfigOpts,
 	syscall_list: &SyscallList,
 ) -> Result<libseccomp::ScmpFilterContext, SeccompError> {
