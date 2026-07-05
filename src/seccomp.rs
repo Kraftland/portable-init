@@ -228,18 +228,15 @@ pub fn compile_filter (
 
 // Loads a Secure Computing filter
 pub fn load_seccomp_filter (
-	filter_compiled: libseccomp::ScmpFilterContext
+	filter_compiled: libseccomp::ScmpFilterContext,
+	cancel_token: tokio_util::sync::CancellationToken,
 ) -> Result<libseccomp::ScmpFd, SeccompError> {
-
-
-
-	let result = filter_result.load();
-	match result {
+	match filter_compiled.load() {
 		Ok(_)	=> {},
 		Err(e)	=> return Err(SeccompError::LoadFilterError(e))
 	};
 
-	let result = filter_result.get_notify_fd();
+	let result = filter_compiled.get_notify_fd();
 	match result {
 		Ok(fd)	=> Ok(fd),
 		Err(e)	=> Err(SeccompError::GetFdError(e))
