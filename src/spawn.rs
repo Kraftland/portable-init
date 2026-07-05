@@ -1,4 +1,3 @@
-use std::ffi::OsString;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -18,11 +17,11 @@ pub struct Spawner {
 #[derive(Debug)]
 pub enum SpawnMessage {
 	Start {
-		target:	OsString,
-		args:	Vec<OsString>,
+		target:	String,
+		args:	Vec<String>,
 		stream:	bool,
 		reply:	Option<tokio::sync::oneshot::Sender<StartReply>>,
-		envs: Option<std::collections::HashMap<OsString, OsString>>,
+		envs: Option<std::collections::HashMap<String, String>>,
 	}
 }
 
