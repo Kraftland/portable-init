@@ -31,6 +31,30 @@ async fn main() -> std::process::ExitCode {
 		}
 	};
 
+	let tx_clone = tx.clone();
+	let uclamp_result = tokio::spawn(
+		async move {
+			match uclamp::apply_uclamp() {
+				Ok(v)	=> {
+					logger::log(
+						&tx_clone,
+						logger::Loglevel::Debug,
+						format!("Successfully set uclamp.min to {v:?}"),
+					).await;
+				},
+				Err(e)	=> {
+					logger::log(
+						&tx_clone,
+						logger::Loglevel::Warn,
+						format!("Could not compile landlock rules: {e:#?}"),
+					).await;
+					std::thread::sleep(std::time::Duration::from_secs(5));
+					panic!("Could not compile landlock rules: {e:#?}")
+				}
+			};
+		}
+	);
+
 	let conf_clone = config_opts.clone();
 	let tx_clone = tx.clone();
 	let landlock_result = tokio::spawn(async move {
@@ -167,6 +191,19 @@ async fn main() -> std::process::ExitCode {
 	};
 
 	let landlock_rules = landlock_result.await.unwrap();
+
+	{
+		match uclamp_result.await {
+			Ok(_)	=> {}
+			Err(e)	=> {
+				logger::log(
+					&tx,
+					logger::Loglevel::Warn,
+					format!("Could not spawn uclamp setter: {e:#?}"),
+				).await;
+			}
+		}
+	};
 
 	let tx_clone = tx.clone();
 	let conf_clone = config_opts.clone();
