@@ -61,7 +61,7 @@ fn get_pass_files_env() -> Result<PassFiles, EnvsError> {
 			for (k, v) in val.file_map {
 				if v == "unknown" {
 					continue
-				}
+				};
 				files_map.insert(k, v);
 			};
 			Ok(PassFiles { file_map: files_map })
