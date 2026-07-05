@@ -166,12 +166,14 @@ async fn run(
 						panic!("Could not load seccomp filter: {e:#?}");
 					}
 				};
+				let cancel_clone = cancel_clone.clone();
 				tokio::spawn(
-					crate::seccomp::process_seccomp_unotify(
-						fd,
-						logtx_clone.clone(),
-						cancel_clone.clone(),
-					),
+					async move {
+						crate::seccomp::process_seccomp_unotify(
+							fd,
+							cancel_clone.clone(),
+						).await;
+					}
 				)
 			};
 
