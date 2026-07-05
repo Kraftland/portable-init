@@ -30,7 +30,8 @@ pub enum SpawnMessage {
 
 #[derive(Debug)]
 pub struct StartReply {
-	pub base_dir:	Option<std::path::PathBuf>,
+	// File descriptor for the slave pty
+	pub master_fd: std::os::fd::OwnedFd,
 }
 
 impl Spawner {
@@ -143,6 +144,7 @@ async fn run(
 					};
 
 					let mut command = tokio::process::Command::new(target);
+					//let mut command = portable_pty::CommandBuilder::new(target);
 
 
 					let command = {
@@ -167,20 +169,20 @@ async fn run(
 
 						std::fs::create_dir_all(&base_clone).unwrap();
 
-						let stdin = listen_socket_as_fd(
-							&base_clone,
-							SocketType::Stdin,
-						).unwrap();
+						let pty_pair = nix::pty::openpty(None, None)
+							.unwrap();
 
-						let stdout = listen_socket_as_fd(
-							&base_clone,
-							SocketType::Stdout,
-						).unwrap();
+						let master = pty_pair.master;
 
-						let stderr = listen_socket_as_fd(
-							&base_clone,
-							SocketType::Stderr,
-						).unwrap();
+
+						let (stdin, stdout, stderr) = {
+							let slave = pty_pair.slave;
+							(slave.try_clone().unwrap(),
+							slave.try_clone().unwrap(),
+							slave)
+						};
+
+
 
 						command.stdin(stdin);
 						command.stdout(stdout);
@@ -190,7 +192,7 @@ async fn run(
 						reply.unwrap().send(
 							StartReply {
 								//id: serial,
-								base_dir: Some(base_clone),
+								master_fd: master,
 							},
 						).unwrap();
 
@@ -227,31 +229,4 @@ enum SocketType {
 	Stdin,
 	Stdout,
 	Stderr,
-}
-
-// Binds to the specific socket for streaming console
-fn listen_socket_as_fd (
-	base: &std::path::PathBuf,
-	typ: SocketType,
-) -> Result<std::os::fd::OwnedFd, SpawnError> {
-	let mut sock_path = base.clone();
-	let name = match typ {
-		SocketType::Stdin	=> {"stdin"}
-		SocketType::Stdout	=> {"stdout"}
-		SocketType::Stderr	=> {"stderr"}
-	};
-
-	sock_path.push(name);
-
-	let listener = std::os::unix::net::UnixListener::bind(sock_path);
-
-	let listener = match listener {
-		Ok(v)	=> v,
-		Err(e)	=> {
-			return Err(SpawnError::ListenStreamError(e));
-		}
-	};
-
-	return Ok(std::os::fd::OwnedFd::from(listener))
-
 }
