@@ -98,11 +98,10 @@ pub async fn process_seccomp_unotify (
 	}
 }
 
-// Loads a Secure Computing filter
-pub fn load_seccomp_filter (
+pub fn compile_filter (
 	config_env: &crate::envs::ConfigOpts,
-	syscall_list: &SyscallList) -> Result<libseccomp::ScmpFd, SeccompError> {
-
+	syscall_list: &SyscallList,
+) -> Result<libseccomp::ScmpFilterContext, SeccompError> {
 	let mut filter_result = match config_env.lockdown {
 		true	=>	{
 			let filter = libseccomp::ScmpFilterContext::new(
@@ -223,7 +222,16 @@ pub fn load_seccomp_filter (
 				}
 			}
 		}
-	}
+	};
+	Ok(filter_result)
+}
+
+// Loads a Secure Computing filter
+pub fn load_seccomp_filter (
+	filter_compiled: libseccomp::ScmpFilterContext
+) -> Result<libseccomp::ScmpFd, SeccompError> {
+
+
 
 	let result = filter_result.load();
 	match result {
