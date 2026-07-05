@@ -178,7 +178,7 @@ async fn main() -> std::process::ExitCode {
 			cancel_clone,
 			counter,
 			tx_clone,
-			&landlock_rules,
+			landlock_rules,
 		);
 		match spawner.await {
 			Ok(v)	=> v,

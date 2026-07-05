@@ -43,7 +43,7 @@ impl Spawner {
 		cancel_token: tokio_util::sync::CancellationToken,
 		counter: crate::counter::Counter,
 		logtx: tokio::sync::mpsc::Sender<crate::logger::LogMessage>,
-		landlock_rules: &landlock::RulesetCreated,
+		landlock_rules: landlock::RulesetCreated,
 	) -> Result<Self, SpawnError> {
 		let (tx, rx) = tokio::sync::mpsc::channel::<SpawnMessage>(5);
 
@@ -80,6 +80,7 @@ impl Spawner {
 				counter,
 				stream_path,
 				logtx,
+				landlock_rules,
 			),
 		);
 
@@ -96,6 +97,7 @@ async fn run(
 	counter:	crate::counter::Counter,
 	base:		std::path::PathBuf,
 	logtx:		tokio::sync::mpsc::Sender<crate::logger::LogMessage>,
+	landlock_rules:	landlock::RulesetCreated,
 ) {
 
 	let count_mu = std::sync::Arc::new(std::sync::Mutex::new(0));
@@ -117,6 +119,7 @@ async fn run(
 		let mut base_clone = base.clone();
 
 		let logtx_clone = logtx.clone();
+		let landlock_rules_clone = landlock_rules.try_clone().unwrap();
 
 		tokio::spawn(async move {
 			{
@@ -133,6 +136,9 @@ async fn run(
 					}
 				};
 			};
+
+			crate::landlock::load_landlock(landlock_rules_clone).unwrap();
+
 			let msg = match msg {
 				Some(v)	=>	v,
 				None	=>	{return}
