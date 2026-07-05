@@ -23,7 +23,7 @@ enum AuxStartError {
 impl Init {
 	#[zbus(
 		name = "AuxStart2",
-		out_args("base_directory")
+		out_args("master_fd")
 	)]
 	async fn request_start (
 		&self,
@@ -33,7 +33,7 @@ impl Init {
 		arguments: Vec<String>,
 		extra_files: std::collections::HashMap<String, String>,
 		envs: std::collections::HashMap<String, String>,
-	) -> Result<String, AuxStartError> {
+	) -> Result<zbus::zvariant::OwnedFd, AuxStartError> {
 		let mut args: Vec<OsString> = vec![];
 
 		if extra_files.len() > 0 {
@@ -105,7 +105,7 @@ impl Init {
 		let reply = reply_rx.await;
 		match reply {
 			Ok(v)	=> {
-				Ok(v.base_dir.unwrap().into_os_string().into_string().unwrap())
+				Ok(zbus::zvariant::OwnedFd::from(v.master_fd))
 			}
 			Err(e)	=> {
 				Err(AuxStartError::RecvError(format!("{e:#?}")))
