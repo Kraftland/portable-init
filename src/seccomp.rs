@@ -14,9 +14,6 @@ pub enum SeccompError {
 
 	#[error("Could not get notify fd: {0:?}")]
 	GetFdError(libseccomp::error::SeccompError),
-
-	#[error("Could not spawn unotify listener: {0:#?}")]
-	SpawnUnotifyError(tokio::task::JoinError)
 }
 
 #[derive(Error,Debug)]
@@ -24,7 +21,7 @@ pub enum SyscallCompileError {
 
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SyscallList {
 	pub deny_list: Vec<libseccomp::ScmpSyscall>,
 	pub allow_list: Vec<libseccomp::ScmpSyscall>,
@@ -45,6 +42,7 @@ pub async fn process_seccomp_unotify (
 		if cancel_token.is_cancelled() {
 			return
 		}
+		//println!("Started unotify watcher");
 		let request = libseccomp::ScmpNotifReq::receive(fd);
 		let request = match request {
 			Ok(val)	=> val,
@@ -101,7 +99,7 @@ pub async fn process_seccomp_unotify (
 	}
 }
 
-pub async fn compile_filter (
+pub fn compile_filter (
 	config_env: &crate::envs::ConfigOpts,
 	syscall_list: &SyscallList,
 ) -> Result<libseccomp::ScmpFilterContext, SeccompError> {
@@ -229,26 +227,20 @@ pub async fn compile_filter (
 	Ok(filter_result)
 }
 
-// Loads a Secure Computing filter, also spawns a unotify instance
-pub async fn load_seccomp_filter (
+// Loads a Secure Computing filter, does not spawn a unotify instance
+pub fn load_seccomp_filter (
 	filter_compiled: libseccomp::ScmpFilterContext,
-	cancel_token: tokio_util::sync::CancellationToken,
-	logtx: tokio::sync::mpsc::Sender<LogMessage>,
-) -> Result<(), SeccompError> {
+) -> Result<libseccomp::ScmpFd, SeccompError> {
 	match filter_compiled.load() {
 		Ok(_)	=> {},
 		Err(e)	=> return Err(SeccompError::LoadFilterError(e))
 	};
 
 	let result = filter_compiled.get_notify_fd();
-	let fd = match result {
-		Ok(fd)	=> fd,
+	match result {
+		Ok(fd)	=> Ok(fd),
 		Err(e)	=> return Err(SeccompError::GetFdError(e))
-	};
-	tokio::spawn(
-		process_seccomp_unotify(fd, logtx, cancel_token)
-	);
-	Ok(())
+	}
 }
 
 pub fn compile_syscall_list(
