@@ -137,7 +137,26 @@ async fn run(
 				};
 			};
 
-			crate::landlock::load_landlock(landlock_rules_clone).unwrap();
+			{
+				let result = crate::landlock::load_landlock(landlock_rules_clone);
+				match result {
+					Ok(_)	=> {
+						crate::logger::log(
+							&logtx_clone,
+							crate::logger::Loglevel::Debug,
+							format!("Loaded landlock rules"),
+						).await;
+					}
+					Err(e)	=> {
+						crate::logger::log(
+							&logtx_clone,
+							crate::logger::Loglevel::Fatal,
+							format!("Could not load landlock rules: {e:#?}"),
+						).await;
+					}
+				};
+			};
+
 
 			let msg = match msg {
 				Some(v)	=>	v,
