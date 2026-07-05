@@ -47,7 +47,7 @@ impl DefinedRules {
 				"/sys/fs/cgroup".into(),
 				"/etc".into(),
 				"/lib".into(),
-				"lib64".into(),
+				"/lib64".into(),
 				"/opt".into(),
 				"/sbin".into(),
 				"/usr".into(),

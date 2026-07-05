@@ -55,6 +55,12 @@ pub async fn process_seccomp_unotify (
 			}
 		};
 
+		crate::logger::log(
+			&logtx,
+			crate::logger::Loglevel::Debug,
+			format!("Processing seccomp unotify from {}", request.pid),
+		).await;
+
 		let syscall_name = request.data.syscall.get_name();
 		let syscall_name = match syscall_name {
 			Ok(val)	=> val,
@@ -142,11 +148,8 @@ pub fn load_seccomp_filter (
 		}
 	};
 
-	let filter_result = filter_result.add_arch(
-		libseccomp::ScmpArch::Native
-	);
-	let filter_result = match filter_result {
-		Ok(v)	=>	{v},
+	match filter_result.add_arch(libseccomp::ScmpArch::Native) {
+		Ok(_)	=>	{},
 		Err(e)	=>	{
 			return Err(SeccompError::AddRuleError(e));
 		},
@@ -156,6 +159,7 @@ pub fn load_seccomp_filter (
 
 	match config_env.lockdown {
 		true => {
+			//println!("Appending allow list: {:?}", &syscall_list.allow_list);
 			for val in syscall_list.allow_list.iter() {
 				let result = filter_result.add_rule(
 					libseccomp::ScmpAction::Allow,
@@ -220,12 +224,6 @@ pub fn load_seccomp_filter (
 			}
 		}
 	}
-
-	let result = filter_result.set_ctl_nnp(true);
-	match result {
-		Ok(_)	=> {},
-		Err(e)	=> return Err(SeccompError::AddRuleError(e))
-	};
 
 	let result = filter_result.load();
 	match result {

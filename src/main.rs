@@ -79,8 +79,6 @@ async fn main() -> std::process::ExitCode {
 		},
 	);
 
-	let conf_clone = config_opts.clone();
-
 	let replacer = match replacer_spawn.await {
 		Ok(v)	=> v,
 		Err(e)	=> {
@@ -139,33 +137,6 @@ async fn main() -> std::process::ExitCode {
 		}
 	};
 
-	let tx_clone = tx.clone();
-	let spawner = {
-		let cancel_clone = cancel_token.clone();
-		let spawner = spawn::Spawner::new(
-			&conf_clone,
-			replacer,
-			cancel_clone,
-			counter,
-			tx_clone,
-		);
-		match spawner.await {
-			Ok(v)	=> v,
-			Err(e)	=> {
-				logger::log(
-					&tx,
-					logger::Loglevel::Fatal,
-					format!("Could not start task spawner: {e:#?}"),
-				).await;
-				std::thread::sleep(std::time::Duration::from_secs(5));
-				panic!("{e:#?}");
-			},
-		}
-	};
-
-	let tx_clone = tx.clone();
-	//let cancel_token_clone = cancel_token.clone();
-
 	let tx_landlock_clone = tx.clone();
 	let conf_clone = config_opts.clone();
 	let landlock_spawn = tokio::spawn(
@@ -188,7 +159,7 @@ async fn main() -> std::process::ExitCode {
 				}
 			}
 
-			let raw_env = std::env::var("_portableEnableLandlock");
+			let raw_env = std::env::var("_portableLockdown");
 			match raw_env {
 				Ok(_)	=> {}
 				Err(_)	=> {return}
@@ -234,8 +205,34 @@ async fn main() -> std::process::ExitCode {
 		}
 	};
 
+	let tx_clone = tx.clone();
+	let conf_clone = config_opts.clone();
+	let spawner = {
+		let cancel_clone = cancel_token.clone();
+		let spawner = spawn::Spawner::new(
+			&conf_clone,
+			replacer,
+			cancel_clone,
+			counter,
+			tx_clone,
+		);
+		match spawner.await {
+			Ok(v)	=> v,
+			Err(e)	=> {
+				logger::log(
+					&tx,
+					logger::Loglevel::Fatal,
+					format!("Could not start task spawner: {e:#?}"),
+				).await;
+				std::thread::sleep(std::time::Duration::from_secs(5));
+				panic!("{e:#?}");
+			},
+		}
+	};
+
 	let spawner_clone = spawner.clone();
 	let conf_clone = config_opts.clone();
+	let tx_clone = tx.clone();
 	let bus_connect_result = tokio::spawn(async move {
 		let tx_clone_2 = tx_clone.clone();
 		let result = ipc::IPC::connect(
