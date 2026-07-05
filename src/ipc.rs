@@ -1,5 +1,4 @@
 use thiserror::Error;
-use std::ffi::OsString;
 
 const INIT_APIVER: u32 = 18;
 
@@ -51,14 +50,10 @@ impl Init {
 
 
 
-		let mut args: Vec<OsString> = vec![];
+		let mut args: Vec<String> = vec![];
 
 		if extra_files.len() > 0 {
-			let mut map = std::collections::HashMap::<OsString, OsString>::new();
-			for (k, v) in extra_files.iter() {
-				map.insert(k.into(), v.into());
-			};
-			match self.replacer.add(map).await {
+			match self.replacer.add(extra_files).await {
 				Ok(_)	=> {}
 				Err(e)	=> {
 					return Err(AuxStartError::ReplaceError(format!("{e:#?}")))
@@ -67,7 +62,7 @@ impl Init {
 		};
 
 
-		let target: OsString = {
+		let target: String = {
 			if custom_target {
 				target_exec.into()
 			} else {
@@ -92,7 +87,7 @@ impl Init {
 		let envs_req = {
 
 			if envs.len() > 0 {
-				let mut map = std::collections::HashMap::<OsString, OsString>::new();
+				let mut map = std::collections::HashMap::<String, String>::new();
 				for (k, v) in envs {
 					map.insert(k.into(), v.into());
 				}
@@ -227,7 +222,7 @@ impl Init {
 			}
 		}
 
-		let mut map = std::collections::HashMap::<OsString, OsString>::new();
+		let mut map = std::collections::HashMap::<String, String>::new();
 
 		for file in selected_paths {
 			let mut dest = shared_dir.clone();
@@ -273,7 +268,10 @@ impl Init {
 					continue;
 				}
 			};
-			map.insert(source.into_os_string(), dest.into_os_string());
+			map.insert(
+				source.into_os_string().into_string().unwrap(),
+				dest.into_os_string().into_string().unwrap(),
+			);
 		};
 		let result = self.replacer.add(map).await;
 		match result {
