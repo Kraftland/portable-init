@@ -165,35 +165,6 @@ async fn main() -> std::process::ExitCode {
 
 	let tx_clone = tx.clone();
 	//let cancel_token_clone = cancel_token.clone();
-	let spawner_clone = spawner.clone();
-	let bus_connect_result = tokio::spawn(async move {
-		let tx_clone_2 = tx_clone.clone();
-		let result = ipc::IPC::connect(
-			&conf_clone,
-			replacer_clone,
-			tx_clone_2,
-			spawner_clone,
-		).await;
-		match result {
-			Ok(val)	=> {
-				logger::log(
-					&tx_clone,
-					logger::Loglevel::Debug,
-					format!("Connected to session bus"),
-				).await;
-				val
-			},
-			Err(e)	=> {
-				crate::logger::log(
-					&tx_clone,
-					crate::logger::Loglevel::Fatal,
-					format!("Could not connect to session bus: {e:#?}"),
-				).await;
-				std::thread::sleep(std::time::Duration::from_secs(5));
-				panic!("{e:#?}");
-			},
-		}
-	});
 
 	let tx_landlock_clone = tx.clone();
 	let conf_clone = config_opts.clone();
@@ -262,6 +233,36 @@ async fn main() -> std::process::ExitCode {
 			).await;
 		}
 	};
+
+	let spawner_clone = spawner.clone();
+	let bus_connect_result = tokio::spawn(async move {
+		let tx_clone_2 = tx_clone.clone();
+		let result = ipc::IPC::connect(
+			&conf_clone,
+			replacer_clone,
+			tx_clone_2,
+			spawner_clone,
+		).await;
+		match result {
+			Ok(val)	=> {
+				logger::log(
+					&tx_clone,
+					logger::Loglevel::Debug,
+					format!("Connected to session bus"),
+				).await;
+				val
+			},
+			Err(e)	=> {
+				crate::logger::log(
+					&tx_clone,
+					crate::logger::Loglevel::Fatal,
+					format!("Could not connect to session bus: {e:#?}"),
+				).await;
+				std::thread::sleep(std::time::Duration::from_secs(5));
+				panic!("{e:#?}");
+			},
+		}
+	});
 
 	let ipc_object = match bus_connect_result.await {
 		Ok(val)	=>	val,
