@@ -21,12 +21,13 @@ async fn main() -> std::process::ExitCode {
 	let cancel_token_clone = cancel_token.clone();
 	let _ = tokio::spawn(logger::logg_worker(rx, cancel_token_clone));
 
-	let config_opts = envs::get_configurations();
-	let config_opts = match config_opts {
-		Ok(conf) => conf,
-		Err(e) => {
-			logger::log(&tx, logger::Loglevel::Fatal, format!("{e}:?")).await;
-			return std::process::ExitCode::FAILURE;
+	let config_opts = {
+		match envs::get_configurations() {
+			Ok(conf) => conf,
+			Err(e) => {
+				logger::log(&tx, logger::Loglevel::Fatal, format!("{e}:?")).await;
+				return std::process::ExitCode::FAILURE;
+			}
 		}
 	};
 
