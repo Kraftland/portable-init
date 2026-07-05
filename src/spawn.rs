@@ -43,6 +43,7 @@ impl Spawner {
 		cancel_token: tokio_util::sync::CancellationToken,
 		counter: crate::counter::Counter,
 		logtx: tokio::sync::mpsc::Sender<crate::logger::LogMessage>,
+		landlock_rules: &landlock::RulesetCreated,
 	) -> Result<Self, SpawnError> {
 		let (tx, rx) = tokio::sync::mpsc::channel::<SpawnMessage>(5);
 
