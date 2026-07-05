@@ -29,58 +29,31 @@ pub struct SyscallList {
 	pub selective: Vec<libseccomp::ScmpSyscall>, // depends on lockdown
 }
 
-pub fn process_seccomp_unotify (
+pub async fn process_seccomp_unotify (
 	fd: libseccomp::ScmpFd,
-	logtx: &tokio::sync::mpsc::Sender<LogMessage>,
+	logtx: tokio::sync::mpsc::Sender<LogMessage>,
+	cancel_token: tokio_util::sync::CancellationToken,
 ) {
-	let execve_id = libseccomp::ScmpSyscall::from_name("execve");
-	let execve_id = match execve_id {
-		Ok(val) => val,
-		Err(e)	=> {
-			crate::logger::log_sync(
-				&logtx,
-				crate::logger::Loglevel::Fatal,
-				format!("Could not resolve execve syscall ID: {e:#?}"),
-			);
-			return;
-		}
-	};
 
 	// On Linux, this should always be -1
 	let raw_eperm_err = -1;
 
 	loop {
+		if cancel_token.is_cancelled() {
+			return
+		}
 		let request = libseccomp::ScmpNotifReq::receive(fd);
 		let request = match request {
 			Ok(val)	=> val,
 			Err(e)	=> {
-				crate::logger::log_sync(
+				crate::logger::log(
 					&logtx,
 					crate::logger::Loglevel::Fatal,
-					format!("Could not receive seccomp notification: {e:#?}"));
+					format!("Could not receive seccomp notification: {e:#?}"),
+				).await;
 				return
 			}
 		};
-		if request.data.syscall == execve_id {
-			// TODO: filter execve
-			let response = libseccomp::ScmpNotifResp::new_continue(
-				request.id,
-				libseccomp::ScmpNotifRespFlags::empty(),
-			);
-			match response.respond(fd) {
-				Ok(_)	=> {},
-				Err(e)	=> {
-					crate::logger::log_sync(
-						&logtx,
-						crate::logger::Loglevel::Warn,
-						format!(
-							"Error filtering syscall: {e:#?}",
-						),
-					);
-				},
-			}
-			continue;
-		}
 
 		let syscall_name = request.data.syscall.get_name();
 		let syscall_name = match syscall_name {
@@ -89,7 +62,7 @@ pub fn process_seccomp_unotify (
 				format!("unresolved syscall ({:#?})", e)
 			}
 		};
-		crate::logger::log_sync(
+		crate::logger::log(
 			&logtx,
 			crate::logger::Loglevel::Warn,
 			format!(
@@ -97,7 +70,7 @@ pub fn process_seccomp_unotify (
 				request.id,
 				syscall_name,
 			),
-		);
+		).await;
 
 		let response = libseccomp::ScmpNotifResp::new_error(
 			request.id,
@@ -107,13 +80,13 @@ pub fn process_seccomp_unotify (
 		match response.respond(fd) {
 			Ok(_)	=> {},
 			Err(e)	=> {
-				crate::logger::log_sync(
+				crate::logger::log(
 					&logtx,
 					crate::logger::Loglevel::Warn,
 					format!(
 						"Error filtering syscall: {e:#?}",
 					),
-				);
+				).await;
 			},
 		}
 	}
@@ -645,11 +618,12 @@ pub fn compile_syscall_list(
 			"wait4".into(),
 			"waitid".into(),
 			"waitpid".into(),
+
+			"execveat".into(),
+			"execve".into(),
 		],
 		process_notify: vec![
 			"setns".into(),
-			"execveat".into(),
-			"execve".into(),
 		],
 		setuid: vec![
 			"setgid".into(),

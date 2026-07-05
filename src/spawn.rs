@@ -119,6 +119,9 @@ async fn run(
 
 		tokio::spawn(async move {
 			{
+				if cancel_clone.is_cancelled() {
+					return;
+				}
 				let data = counter_clone.lock();
 				match data {
 					Ok(mut v)	=> {
@@ -137,14 +140,11 @@ async fn run(
 			crate::logger::log(
 				&logtx_clone,
 				crate::logger::Loglevel::Debug,
-				format!("Spawning process {msg:?}"),
+				format!("Spawning process: {msg:?}"),
 			).await;
 
 			match msg {
 				SpawnMessage::Start { target, args, stream, reply, envs } => {
-					if cancel_clone.is_cancelled() {
-						return;
-					}
 					let args_new = replacer_clone.rewrite(args);
 					let args_new = match args_new.await {
 						Ok(v)	=> {v}
@@ -154,10 +154,13 @@ async fn run(
 					};
 
 					let mut command = tokio::process::Command::new(target);
-					let command = {
+					let mut command = {
 						match envs {
-							Some(v)	=> {command.envs(v)}
-							None	=> {&mut command}
+							Some(v)	=> {
+								command.envs(v);
+								command
+							}
+							None	=> {command}
 						}
 					};
 					let command = command.args(args_new.iter());
@@ -202,11 +205,21 @@ async fn run(
 								master_fd: master,
 							},
 						).unwrap();
+						command.kill_on_drop(true);
 
 						command
 					} else {
+						command.kill_on_drop(true);
 						command
 					};
+
+					crate::logger::log(
+						&logtx_clone,
+						crate::logger::Loglevel::Debug,
+						format!("Constructed command: {command:?}"),
+					).await;
+
+					//std::thread::sleep(std::time::Duration::from_secs(5));
 
 					let mut result = command
 						.spawn()
