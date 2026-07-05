@@ -185,14 +185,8 @@ pub async fn compile_landlock_rules (conf: &crate::envs::ConfigOpts) -> Result<l
 	}
 }
 
-pub fn load_landlock (rule: &landlock::RulesetCreated) -> Result<(), LandlockError> {
-	let rule_set = rule.try_clone();
-	let rule_set = match rule_set {
-		Ok(v)	=> {v}
-		Err(e)	=> {
-			return Err(LandlockError::CloneError(e));
-		}
-	};
+pub fn load_landlock (rule: landlock::RulesetCreated) -> Result<(), LandlockError> {
+	let rule_set = rule;
 
 	let _scope = landlock::Scope::from(landlock::Scope::Signal);
 
