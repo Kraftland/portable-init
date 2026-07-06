@@ -184,13 +184,26 @@ impl Init {
 		let mut shared_dir = home;
 		shared_dir.push("Shared");
 
-		let result = std::fs::create_dir(shared_dir.as_path());
-		match result {
-			Ok(_)	=> {},
+		match std::fs::exists(shared_dir.as_path()) {
+			Ok(v)	=> {
+				if v == true {} else {
+					match std::fs::create_dir(shared_dir.as_path()) {
+						Ok(_)	=> {}
+						Err(e)	=> {
+							crate::logger::log_warn(
+							format!(
+							"Could not create shared directory: {e:#?}",
+							),
+						);
+						return;
+						}
+					};
+				}
+			}
 			Err(e)	=> {
 				crate::logger::log_warn(
 					format!(
-						"Could not create shared directory: {e:#?}",
+						"Could not detect shared directory: {e:#?}",
 					),
 				);
 				return;
