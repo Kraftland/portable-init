@@ -9,10 +9,9 @@ pub enum InhibitError {
 }
 
 pub async fn inhibit_suspend(
-	conn:		zbus::Connection,
 	cancel_token:	tokio_util::sync::CancellationToken,
 ) -> Result<(), InhibitError> {
-	let proxy = match ashpd::desktop::inhibit::InhibitProxy::with_connection(conn).await {
+	let proxy = match ashpd::desktop::inhibit::InhibitProxy::new().await {
 		Ok(v)	=> v,
 		Err(e)	=> {
 			return Err(
@@ -31,6 +30,9 @@ pub async fn inhibit_suspend(
 	).await {
 		Ok(v)	=> {
 			tokio::spawn(async move {
+				crate::logger::log_debug(
+					format!("Inhibited suspend on package request"),
+				);
 				cancel_token.cancelled().await;
 				match v.close().await {
 					Ok(_)	=> {}
