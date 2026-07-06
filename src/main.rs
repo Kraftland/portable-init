@@ -1,5 +1,4 @@
 mod logger;
-use tokio::sync::mpsc;
 mod seccomp;
 mod envs;
 mod landlock;
@@ -33,51 +32,39 @@ async fn main() -> std::process::ExitCode {
 		match seccomp::compile_syscall_list() {
 			Ok(v)	=> v,
 			Err(e)	=> {
-				logger::log(
-					&tx_clone,
-					logger::Loglevel::Fatal,
+				logger::log_fatal(
 					format!("Could not compile seccomp list: {e:#?}"),
-				).await;
-				std::thread::sleep(std::time::Duration::from_secs(5));
-				panic!("Could not compile seccomp list: {e:#?}")
+				);
+				panic!("Could not compile seccomp list: {e:#?}");
 			}
 		}
 	});
 
-	let tx_clone = tx.clone();
 	let uclamp_result = tokio::spawn(
 		async move {
 			match uclamp::apply_uclamp() {
 				Ok(v)	=> {
-					logger::log(
-						&tx_clone,
-						logger::Loglevel::Debug,
-						format!("Successfully set uclamp.min to {v:?}"),
-					).await;
+					logger::log_debug(
+						format!("Successfully set uclamp.max to {v:?}"),
+					);
 				},
 				Err(e)	=> {
-					logger::log(
-						&tx_clone,
-						logger::Loglevel::Warn,
+					logger::log_warn(
 						format!("Could not set uclamp: {e:#?}"),
-					).await;
+					);
 				}
 			};
 		}
 	);
 
 	let conf_clone = config_opts.clone();
-	let tx_clone = tx.clone();
 	let landlock_result = tokio::spawn(async move {
 		match landlock::compile_landlock_rules(&conf_clone).await {
 			Ok(v)	=> v,
 			Err(e)	=> {
-				logger::log(
-					&tx_clone,
-					logger::Loglevel::Fatal,
+				logger::log_fatal(
 					format!("Could not compile landlock rules: {e:#?}"),
-				).await;
-				std::thread::sleep(std::time::Duration::from_secs(5));
+				);
 				panic!("Could not compile landlock rules: {e:#?}")
 			}
 		}
@@ -95,12 +82,9 @@ async fn main() -> std::process::ExitCode {
 	let replacer = match replacer_spawn.await {
 		Ok(v)	=> v,
 		Err(e)	=> {
-			logger::log(
-				&tx,
-				logger::Loglevel::Fatal,
+			logger::log_fatal(
 				format!("Could not start cmdline replacer: {e:#?}"),
-			).await;
-			std::thread::sleep(std::time::Duration::from_secs(5));
+			);
 			panic!("{e:#?}");
 		}
 	};
@@ -108,12 +92,7 @@ async fn main() -> std::process::ExitCode {
 	let replacer = match replacer {
 		Ok(v)	=> v,
 		Err(e)	=> {
-			logger::log(
-				&tx,
-				logger::Loglevel::Fatal,
-				format!("Could not start cmdline replacer: {e:#?}"),
-			).await;
-			std::thread::sleep(std::time::Duration::from_secs(5));
+			logger::log_fatal(format!("Could not start cmdline replacer: {e:#?}"));
 			panic!("{e:#?}");
 		},
 	};
@@ -123,12 +102,7 @@ async fn main() -> std::process::ExitCode {
 		match replacer.add(map).await {
 			Ok(_)	=> {}
 			Err(e)	=> {
-				logger::log(
-					&tx,
-					logger::Loglevel::Fatal,
-					format!("Could not contact replacer: {e:#?}"),
-				).await;
-				std::thread::sleep(std::time::Duration::from_secs(5));
+				logger::log_fatal(format!("Could not contact replacer: {e:#?}"));
 				panic!("{e:#?}");
 			}
 		};
@@ -140,12 +114,7 @@ async fn main() -> std::process::ExitCode {
 	let counter = match counter_spawn.await {
 		Ok(v)	=> v,
 		Err(e)	=> {
-			logger::log(
-				&tx,
-				logger::Loglevel::Fatal,
-				format!("Could not contact replacer: {e:#?}"),
-			).await;
-			std::thread::sleep(std::time::Duration::from_secs(5));
+			logger::log_fatal(format!("Could not contact replacer: {e:#?}"));
 			panic!("{e:#?}");
 		}
 	};
@@ -156,11 +125,7 @@ async fn main() -> std::process::ExitCode {
 		match uclamp_result.await {
 			Ok(_)	=> {}
 			Err(e)	=> {
-				logger::log(
-					&tx,
-					logger::Loglevel::Warn,
-					format!("Could not spawn uclamp setter: {e:#?}"),
-				).await;
+				logger::log_warn(format!("Could not spawn uclamp setter: {e:#?}"));
 			}
 		}
 	};
@@ -169,18 +134,12 @@ async fn main() -> std::process::ExitCode {
 		match seccomp_result.await {
 			Ok(v)	=> {v}
 			Err(e)	=> {
-				logger::log(
-					&tx,
-					logger::Loglevel::Fatal,
-					format!("Could not contact replacer: {e:#?}"),
-				).await;
-				std::thread::sleep(std::time::Duration::from_secs(5));
+				logger::log_fatal(format!("Could not compile seccomp list: {e:#?}"));
 				panic!("{e:#?}");
 			}
 		}
 	};
 
-	let tx_clone = tx.clone();
 	let conf_clone = config_opts.clone();
 	let spawner = {
 		let cancel_clone = cancel_token.clone();
@@ -189,19 +148,13 @@ async fn main() -> std::process::ExitCode {
 			replacer,
 			cancel_clone,
 			counter,
-			tx_clone,
 			landlock_rules,
 			seccomp_list,
 		);
 		match spawner.await {
 			Ok(v)	=> v,
 			Err(e)	=> {
-				logger::log(
-					&tx,
-					logger::Loglevel::Fatal,
-					format!("Could not start task spawner: {e:#?}"),
-				).await;
-				std::thread::sleep(std::time::Duration::from_secs(5));
+				logger::log_fatal(format!("Could not start task spawner: {e:#?}"));
 				panic!("{e:#?}");
 			},
 		}
@@ -209,31 +162,21 @@ async fn main() -> std::process::ExitCode {
 
 	let spawner_clone = spawner.clone();
 	let conf_clone = config_opts.clone();
-	let tx_clone = tx.clone();
 	let bus_connect_result = tokio::spawn(async move {
-		let tx_clone_2 = tx_clone.clone();
 		let result = ipc::IPC::connect(
 			&conf_clone,
 			replacer_clone,
-			tx_clone_2,
 			spawner_clone,
 		).await;
 		match result {
 			Ok(val)	=> {
-				logger::log(
-					&tx_clone,
-					logger::Loglevel::Debug,
-					format!("Connected to session bus"),
-				).await;
+				logger::log_debug(format!("Connected to session bus"));
 				val
 			},
 			Err(e)	=> {
-				crate::logger::log(
-					&tx_clone,
-					crate::logger::Loglevel::Fatal,
+				crate::logger::log_fatal(
 					format!("Could not connect to session bus: {e:#?}"),
-				).await;
-				std::thread::sleep(std::time::Duration::from_secs(5));
+				);
 				panic!("{e:#?}");
 			},
 		}
@@ -242,12 +185,7 @@ async fn main() -> std::process::ExitCode {
 	let ipc_object = match bus_connect_result.await {
 		Ok(val)	=>	val,
 		Err(e)	=>	{
-			logger::log(
-				&tx,
-				logger::Loglevel::Fatal,
-				format!("Could not connect to Session Bus: {e:#?}")
-			).await;
-			std::thread::sleep(std::time::Duration::from_secs(5));
+			logger::log_fatal(format!("Could not connect to Session Bus: {e:#?}"));
 			return std::process::ExitCode::FAILURE;
 		}
 	};
