@@ -200,13 +200,12 @@ async fn main() -> std::process::ExitCode {
 		}
 	).await;
 
+	task_tracker.close();
 
 	if config_opts.inhibit {
-		let cancel_clone = cancel_token.clone();
-		tokio::spawn(inhibit::inhibit_suspend(cancel_clone));
-	}
-
-	task_tracker.close();
+		let cancel_token_clone = cancel_token.clone();
+		tokio::spawn(crate::inhibit::inhibit_suspend(cancel_token_clone));
+	};
 
 	let sigterm = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate());
 
