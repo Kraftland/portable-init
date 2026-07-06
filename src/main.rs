@@ -203,9 +203,7 @@ async fn main() -> std::process::ExitCode {
 
 	if config_opts.inhibit {
 		let cancel_clone = cancel_token.clone();
-		tokio::spawn(async move {
-			inhibit::inhibit_suspend(cancel_clone)
-		});
+		tokio::spawn(inhibit::inhibit_suspend(cancel_clone));
 	}
 
 	task_tracker.close();
