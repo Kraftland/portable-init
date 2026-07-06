@@ -155,7 +155,16 @@ impl Init {
 		let uris = files.uris();
 		let mut selected_paths: Vec<String> = vec![];
 		for uri in uris.iter() {
-			let pth = uri.as_str();
+			let pth = urlencoding::decode(uri.as_str());
+			let pth = match pth {
+				Ok(v)	=> v,
+				Err(e)	=> {
+					crate::logger::log_warn(
+						format!("Could not convert {uri} to String: {e:#?}")
+					);
+					continue;
+				}
+			};
 			let result = pth.strip_prefix("file://");
 			match result {
 				Some(v)	=> {
