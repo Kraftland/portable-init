@@ -8,15 +8,10 @@ pub enum InhibitError {
 	CallInhibitError(ashpd::Error),
 }
 
-pub async fn inhibit_if_needed(
-	conf:		&crate::envs::ConfigOpts,
+pub async fn inhibit_suspend(
 	conn:		zbus::Connection,
 	cancel_token:	tokio_util::sync::CancellationToken,
 ) -> Result<(), InhibitError> {
-	if ! conf.inhibit {
-		return Ok(())
-	}
-
 	let proxy = match ashpd::desktop::inhibit::InhibitProxy::with_connection(conn).await {
 		Ok(v)	=> v,
 		Err(e)	=> {
