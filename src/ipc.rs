@@ -329,6 +329,7 @@ impl IPC {
 		replace_ipc: crate::process_env::Replacer,
 		spawner: crate::spawn::Spawner,
 	) -> Result<Self, BusError> {
+
 		let conn = zbus::connection::Builder::session();
 		let conn = match conn {
 			Ok(val)	=> val,
