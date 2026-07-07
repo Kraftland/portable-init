@@ -37,10 +37,10 @@ pub async fn process_seccomp_unotify (
 	let raw_eperm_err = -1;
 
 	loop {
+		let request = libseccomp::ScmpNotifReq::receive(fd);
 		if cancel_token.is_cancelled() {
 			return
 		}
-		let request = libseccomp::ScmpNotifReq::receive(fd);
 		let request = match request {
 			Ok(val)	=> val,
 			Err(e)	=> {
