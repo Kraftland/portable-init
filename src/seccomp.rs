@@ -59,18 +59,29 @@ pub async fn process_seccomp_unotify (
 
 		crate::logger::log_warn(
 			format!(
-				"PID {} performed illegal operation: {} on architecture {:?}",
+				"PID {} performed illegal syscall: {} on architecture {:?}",
 				&request.pid,
 				syscall_name,
 				&request.data.arch,
 			)
 		);
 
-		let response = libseccomp::ScmpNotifResp::new_error(
-			request.id,
-			raw_eperm_err,
-			libseccomp::ScmpNotifRespFlags::empty(),
-		);
+		let response = {
+			if syscall_name == "capset".to_string() {
+				libseccomp::ScmpNotifResp::new_val(
+					request.id,
+					0,
+					libseccomp::ScmpNotifRespFlags::empty(),
+				)
+			} else {
+				libseccomp::ScmpNotifResp::new_error(
+					request.id,
+					raw_eperm_err,
+					libseccomp::ScmpNotifRespFlags::empty(),
+				)
+			}
+		};
+
 		match response.respond(fd) {
 			Ok(_)	=> {},
 			Err(e)	=> {
