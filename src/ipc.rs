@@ -266,7 +266,8 @@ impl Init {
 					format!("Could not contact replacer: {e:#?}")
 				);
 			}
-		}
+		};
+		crate::cleaner::clean_shared_dir();
 	}
 
 	#[zbus(
