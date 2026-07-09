@@ -8,6 +8,7 @@ mod counter;
 mod ipc;
 mod process_env;
 mod inhibit;
+mod cleaner;
 
 #[tokio::main]
 async fn main() -> std::process::ExitCode {
