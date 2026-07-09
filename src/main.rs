@@ -29,6 +29,10 @@ async fn main() -> std::process::ExitCode {
 		}
 	};
 
+	logger::log_debug(
+		format!("Got configurations: {config_opts:#?}"),
+	);
+
 	let seccomp_result = tokio::spawn(async move {
 		match seccomp::compile_syscall_list() {
 			Ok(v)	=> v,

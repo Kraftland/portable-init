@@ -198,7 +198,7 @@ pub fn get_configurations() -> Result<ConfigOpts, EnvsError> {
 		let mut os_args = std::env::args_os();
 		let _exec_name = os_args.next(); // looks like the first next call returns index 0?
 		let mut args: Vec<String> = vec![];
-		if os_args.len() > 1 {
+		if os_args.len() >= 1 {
 			loop {
 				match os_args.next() {
 					Some(v)	=> {args.push(v.into_string().unwrap());}
