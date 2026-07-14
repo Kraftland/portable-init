@@ -256,7 +256,7 @@ pub fn compile_syscall_list(
 		module:		Vec<String>,
 		mount:		Vec<String>,
 		network:	Vec<String>, // @network-io
-		obsolete:	Vec<String>,
+		obsolete:	Vec<String>, // also contains dangerous syscalls
 		pkey:		Vec<String>, // memory protection keys
 		raw_io:		Vec<String>,
 		reboot:		Vec<String>,
@@ -549,6 +549,18 @@ pub fn compile_syscall_list(
 			"uselib".into(),
 			"ustat".into(),
 			"vserver".into(),
+
+			// Dangerous calls!
+			"syslog".into(),
+			"acct".into(), // accounting
+			"quotactl".into(), // read quota status
+
+			// memory ops that are obsolete or insecure
+			"mbind".into(),
+			"migrate_pages".into(),
+			"move_pages".into(),
+			"set_mempolicy".into(),
+			"set_mempolicy_home_node".into(),
 		],
 		pkey: vec![
 			"pkey_alloc".into(),
@@ -571,16 +583,11 @@ pub fn compile_syscall_list(
 		],
 		resources: vec![
 			"ioprio_set".into(),
-			"mbind".into(),
-			"migrate_pages".into(),
-			"move_pages".into(),
 			"nice".into(),
 			"sched_setaffinity".into(),
 			"sched_setattr".into(),
 			"sched_setparam".into(),
 			"sched_setscheduler".into(),
-			"set_mempolicy".into(),
-			"set_mempolicy_home_node".into(),
 			"setpriority".into(),
 			"setrlimit".into(),
 		],
