@@ -33,6 +33,11 @@ pub async fn process_seccomp_unotify (
 	cancel_token: tokio_util::sync::CancellationToken,
 ) {
 
+	let fake_allow: Vec<String> = vec![
+		"chroot".into(),
+		"capset".into(),
+	];
+
 	// On Linux, this should always be -1
 	let raw_eperm_err = -1;
 
@@ -67,7 +72,7 @@ pub async fn process_seccomp_unotify (
 		);
 
 		let response = {
-			if syscall_name == "capset".to_string() {
+			if fake_allow.contains(&syscall_name) {
 				libseccomp::ScmpNotifResp::new_val(
 					request.id,
 					0,
