@@ -823,12 +823,12 @@ pub fn compile_syscall_list(
 		syscall_by_names.reboot,
 		syscall_by_names.swap,
 		syscall_by_names.setuid,
+		syscall_by_names.keyring,
 	];
 	let debug_syscall_group: Vec<Vec<String>> = vec![
 		syscall_by_names.debug,
 	];
 	let lockdown_syscall_group: Vec<Vec<String>> = vec![
-		syscall_by_names.keyring,
 		syscall_by_names.mount,
 		syscall_by_names.process_notify,
 		vec![
