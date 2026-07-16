@@ -33,7 +33,7 @@ pub async fn process_seccomp_unotify (
 	cancel_token: tokio_util::sync::CancellationToken,
 ) {
 
-	let errno_raw = {
+	let errno_raw = - {
 		use nix::errno::Errno;
 		let err = Errno::ENOSYS;
 		err as i32
@@ -42,6 +42,7 @@ pub async fn process_seccomp_unotify (
 	let fake_allow: Vec<String> = vec![
 		"chroot".into(),
 		"capset".into(),
+		"setfsuid".into(),
 	];
 
 	loop {
