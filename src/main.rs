@@ -223,15 +223,15 @@ async fn main() -> std::process::ExitCode {
 
 	tokio::select! {
 		_ = cancel_token.cancelled()	=> {
-			println!("Shutting down on cancel...");
+			logger::log_info(format!("Shutting down on cancel token..."));
 		},
 		_ = tokio::signal::ctrl_c()	=> {
-			println!("Shutting down on SIGINT...");
+			logger::log_info(format!("Shutting down on SIGINT..."));
 			cancel_token.cancel();
 		},
 		_ = sigterm.recv()
 			=> {
-			println!("Shutting down on SIGTERM (polite quit request)");
+			logger::log_info(format!("Shutting down on SIGTERM..."));
 			cancel_token.cancel();
 		}
 	};
