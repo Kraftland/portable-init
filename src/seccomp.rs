@@ -798,6 +798,12 @@ pub fn compile_syscall_list(
 			"uname".into(),
 			"userfaultfd".into(),
 			"vmsplice".into(),
+
+			/*
+				This is useful! Minecraft and Firefox uses this for
+					DMA-BUF rendering
+				Thanks @sf467 for testing this syscall filter
+			*/
 			"mincore".into(),
 		],
 	};
