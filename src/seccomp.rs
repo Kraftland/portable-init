@@ -325,6 +325,7 @@ pub fn compile_syscall_list(
 			"rtas".into(),
 			"s390_runtime_instr".into(),
 			"sys_debug_setcontext".into(),
+			"personality".into(),
 		],
 		fs_op: vec![
 			"access".into(),
@@ -770,7 +771,6 @@ pub fn compile_syscall_list(
 			"name_to_handle_at".into(),
 			"oldolduname".into(),
 			"olduname".into(),
-			"personality".into(),
 			"readahead".into(),
 			"readdir".into(),
 			"remap_file_pages".into(),
@@ -794,6 +794,7 @@ pub fn compile_syscall_list(
 			"uname".into(),
 			"userfaultfd".into(),
 			"vmsplice".into(),
+			"mincore".into(),
 		],
 	};
 
