@@ -33,13 +33,16 @@ pub async fn process_seccomp_unotify (
 	cancel_token: tokio_util::sync::CancellationToken,
 ) {
 
+	let errno_raw = {
+		use nix::errno::Errno;
+		let err = Errno::ENOSYS;
+		err as i32
+	};
+
 	let fake_allow: Vec<String> = vec![
 		"chroot".into(),
 		"capset".into(),
 	];
-
-	// On Linux, this should always be -1
-	let raw_eperm_err = -1;
 
 	loop {
 		let request = libseccomp::ScmpNotifReq::receive(fd);
@@ -81,7 +84,7 @@ pub async fn process_seccomp_unotify (
 			} else {
 				libseccomp::ScmpNotifResp::new_error(
 					request.id,
-					raw_eperm_err,
+					errno_raw,
 					libseccomp::ScmpNotifRespFlags::empty(),
 				)
 			}
