@@ -3,7 +3,7 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum SpawnError {
 	#[error("Could not send message via channel: {0:#?}")]
-	ChannelSendError(Box<dyn std::error::Error>),
+	ChannelSendError(tokio::sync::mpsc::error::SendError<crate::counter::CounterMessage>),
 
 	#[error("Could not clone landlock rules: {0:#?}")]
 	CloneLandlockError(std::io::Error),
@@ -188,9 +188,23 @@ async fn run(
 					};
 					let command = command.args(args_new.iter());
 
-					counter_tx.send(
-						crate::counter::CounterMessage::ProcessStarted,
-					).await.unwrap();
+					{
+						let result = counter_tx.send(
+							crate::counter::CounterMessage::ProcessStarted,
+						)
+							.await
+							.map_err(SpawnError::ChannelSendError);
+						match result {
+							Ok(_)	=> {}
+							Err(e)	=> {
+								crate::logger::log_fatal(
+									format!(
+										"Could not contact counter: {e:#?}"
+									)
+								);
+							}
+						}
+					};
 
 					let command = if stream {
 
