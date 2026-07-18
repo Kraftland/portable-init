@@ -33,7 +33,7 @@ async fn main() -> std::process::ExitCode {
 		format!("Got configurations: {config_opts:#?}"),
 	);
 
-	let seccomp_result = tokio::spawn(async move {
+	let seccomp_result = tokio::task::spawn_blocking(move || {
 		match seccomp::compile_syscall_list() {
 			Ok(v)	=> v,
 			Err(e)	=> {
