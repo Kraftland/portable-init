@@ -143,7 +143,7 @@ async fn run(
 				let filter = match crate::seccomp::compile_filter(
 					&conf_clone,
 					&seccomp_list,
-				) {
+				).await {
 					Ok(v)	=> v,
 					Err(e)	=> {
 						panic!("Could not compile seccomp filter: {e:#?}");
