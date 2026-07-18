@@ -7,6 +7,9 @@ pub enum SpawnError {
 
 	#[error("Could not clone landlock rules: {0:#?}")]
 	CloneLandlockError(std::io::Error),
+
+	#[error("Could not open pty for streaming: {0:#?}")]
+	OpenPtyError(nix::Error),
 }
 
 #[derive(Clone)]
@@ -94,7 +97,7 @@ async fn run(
 					Ok(v)	=> v,
 					Err(e)	=> {
 						crate::logger::log_fatal(
-							format!("Could not clone landlock rules: {e:#?}"),
+							format!("{e:#?}"),
 						);
 						panic!("{e:#?}");
 					}
@@ -208,8 +211,19 @@ async fn run(
 
 					let command = if stream {
 
-						let pty_pair = nix::pty::openpty(None, None)
-							.unwrap();
+						let pty_pair = {
+							match nix::pty::openpty(None, None)
+								.map_err(SpawnError::OpenPtyError)
+							{
+								Ok(v)	=> v,
+								Err(e)	=> {
+									crate::logger::log_fatal(
+									format!("{e:#?}"),
+									);
+									panic!("{e:#?}")
+								}
+							}
+						};
 
 						let master = pty_pair.master;
 
