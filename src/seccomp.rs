@@ -28,7 +28,7 @@ pub struct SyscallList {
 	pub selective: Vec<libseccomp::ScmpSyscall>, // depends on lockdown
 }
 
-pub async fn process_seccomp_unotify (
+pub fn process_seccomp_unotify (
 	fd: libseccomp::ScmpFd,
 	cancel_token: tokio_util::sync::CancellationToken,
 ) {
