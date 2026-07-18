@@ -97,7 +97,6 @@ pub fn get_configurations() -> Result<ConfigOpts, EnvsError> {
 		}
 	};
 
-	let is_lockdown: bool;
 	let has_info: bool;
 
 	let app_id: String;
@@ -149,21 +148,12 @@ pub fn get_configurations() -> Result<ConfigOpts, EnvsError> {
 		}
 	};
 
-	let with_info: String = "with-info".to_string();
-	let without_info: String = "without-info".to_string();
-
-	if lockdown_env == with_info {
-		is_lockdown = true;
-	} else if lockdown_env == without_info {
-		is_lockdown = true;
-	} else if lockdown_env == String::from("") {
-		is_lockdown = false;
-	} else {
-		return Err(EnvsError::InvalidEnvError(
-			String::from("_portableLockdown"),
-			lockdown_env,
-		));
-	}
+	let is_lockdown = {
+		match lockdown_env.as_str() {
+			"with-info" | "without-info"	=> {true}
+			_				=> {false}
+		}
+	};
 
 	let mut is_debugging: bool = false;
 	let debug_env = std::env::var("_portableAllowDebugging");
