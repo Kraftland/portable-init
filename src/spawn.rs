@@ -146,7 +146,10 @@ async fn run(
 				).await {
 					Ok(v)	=> v,
 					Err(e)	=> {
-						panic!("Could not compile seccomp filter: {e:#?}");
+						crate::logger::log_fatal(
+						 format!("Could not compile seccomp filter: {e:#?}")
+						);
+						panic!("Could not compile seccomp filter: {e:#?}")
 					}
 				};
 				let fd = match crate::seccomp::load_seccomp_filter(
