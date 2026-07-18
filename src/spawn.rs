@@ -2,11 +2,11 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum SpawnError {
-	#[error("Could not create stream directory: {0:#?}")]
-	MkStreamDirError(std::io::Error),
+	#[error("Could not send message via channel: {0:#?}")]
+	ChannelSendError(Box<dyn std::error::Error>),
 
-	#[error("Could not locate XDG_RUNTIME_DIR: {0:#?}")]
-	RuntimeDirError(std::env::VarError),
+	#[error("Could not clone landlock rules: {0:#?}")]
+	CloneLandlockError(std::io::Error),
 }
 
 #[derive(Clone)]
@@ -73,9 +73,6 @@ async fn run(
 	seccomp_list:	crate::seccomp::SyscallList,
 	conf:		crate::envs::ConfigOpts,
 ) {
-
-	let count_mu = std::sync::Arc::new(std::sync::Mutex::new(0));
-
 	loop {
 		let msg = tokio::select! {
 			_	= cancel_token.cancelled()	=> {
@@ -89,9 +86,20 @@ async fn run(
 		let cancel_clone = cancel_token.clone();
 		let replacer_clone = replacer.clone();
 		let counter_tx = counter.send_channel.clone();
-		let counter_clone = std::sync::Arc::clone(&count_mu);
 
-		let landlock_rules_clone = landlock_rules.try_clone().unwrap();
+		let landlock_rules_clone = {
+			match landlock_rules
+				.try_clone()
+				.map_err(SpawnError::CloneLandlockError) {
+					Ok(v)	=> v,
+					Err(e)	=> {
+						crate::logger::log_fatal(
+							format!("Could not clone landlock rules: {e:#?}"),
+						);
+						panic!("{e:#?}");
+					}
+				}
+		};
 		let seccomp_list = seccomp_list.clone();
 		let conf_clone = conf.clone();
 
@@ -100,15 +108,6 @@ async fn run(
 				if cancel_clone.is_cancelled() {
 					return;
 				}
-				let data = counter_clone.lock();
-				match data {
-					Ok(mut v)	=> {
-						*v+=1;
-					}
-					Err(e)	=> {
-						panic!("{e:#?}")
-					}
-				};
 			};
 
 			{
@@ -194,10 +193,6 @@ async fn run(
 					).await.unwrap();
 
 					let command = if stream {
-						let serial = {
-							let count = counter_clone.lock().unwrap();
-							*count
-						}.to_string();
 
 						let pty_pair = nix::pty::openpty(None, None)
 							.unwrap();
