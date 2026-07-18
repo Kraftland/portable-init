@@ -46,38 +46,12 @@ impl Spawner {
 	) -> Result<Self, SpawnError> {
 		let (tx, rx) = tokio::sync::mpsc::channel::<SpawnMessage>(5);
 
-		let runtime_dir = std::env::var("XDG_RUNTIME_DIR");
-		let runtime_dir = match runtime_dir {
-			Ok(v)	=> v,
-			Err(e)	=> {
-				return Err(
-					SpawnError::RuntimeDirError(e)
-				)
-			}
-		};
-
-		let stream_path: std::path::PathBuf =
-			[runtime_dir.as_str(), "portable", conf.sandbox_id.as_str(), "console"]
-			.iter().
-			collect();
-
-		let result = std::fs::create_dir_all(&stream_path);
-		match result {
-			Ok(_)	=> {}
-			Err(e)	=> {
-				return Err(
-					SpawnError::MkStreamDirError(e)
-				);
-			}
-		}
-
 		tokio::spawn(
 			run(
 				cancel_token,
 				replacer,
 				rx,
 				counter,
-				stream_path,
 				landlock_rules,
 				seccomp_list,
 				conf.clone(),
@@ -95,7 +69,6 @@ async fn run(
 	replacer:	crate::process_env::Replacer,
 	mut rx:		tokio::sync::mpsc::Receiver<SpawnMessage>,
 	counter:	crate::counter::Counter,
-	base:		std::path::PathBuf,
 	landlock_rules:	landlock::RulesetCreated,
 	seccomp_list:	crate::seccomp::SyscallList,
 	conf:		crate::envs::ConfigOpts,
@@ -117,7 +90,6 @@ async fn run(
 		let replacer_clone = replacer.clone();
 		let counter_tx = counter.send_channel.clone();
 		let counter_clone = std::sync::Arc::clone(&count_mu);
-		let mut base_clone = base.clone();
 
 		let landlock_rules_clone = landlock_rules.try_clone().unwrap();
 		let seccomp_list = seccomp_list.clone();
@@ -226,10 +198,6 @@ async fn run(
 							let count = counter_clone.lock().unwrap();
 							*count
 						}.to_string();
-
-						base_clone.push(&serial);
-
-						std::fs::create_dir_all(&base_clone).unwrap();
 
 						let pty_pair = nix::pty::openpty(None, None)
 							.unwrap();
