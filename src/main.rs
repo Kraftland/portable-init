@@ -45,8 +45,8 @@ async fn main() -> std::process::ExitCode {
 		}
 	});
 
-	let uclamp_result = tokio::spawn(
-		async move {
+	let uclamp_result = tokio::task::spawn_blocking(
+		move || {
 			match uclamp::apply_uclamp() {
 				Ok(v)	=> {
 					logger::log_debug(
