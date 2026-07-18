@@ -161,12 +161,12 @@ async fn run(
 					}
 				};
 				let cancel_clone = cancel_clone.clone();
-				tokio::spawn(
-					async move {
+				std::thread::spawn(
+					 move || {
 						crate::seccomp::process_seccomp_unotify(
 							fd,
 							cancel_clone.clone(),
-						).await;
+						);
 					}
 				)
 			};
