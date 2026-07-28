@@ -283,6 +283,7 @@ pub fn compile_syscall_list(
 			"io_getevents".into(),
 			"io_pgetevents".into(),
 			"io_pgetevents_time64".into(),
+			"io_uring_setup".into(),
 		],
 		basic_io: vec![
 			"_llseek".into(),

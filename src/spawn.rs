@@ -230,9 +230,11 @@ async fn run(
 
 						let (stdin, stdout, stderr) = {
 							let slave = pty_pair.slave;
-							(slave.try_clone().unwrap(),
-							slave.try_clone().unwrap(),
-							slave)
+							(
+								slave.try_clone().unwrap(),
+								slave.try_clone().unwrap(),
+								slave,
+							)
 						};
 
 
