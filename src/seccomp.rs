@@ -62,7 +62,18 @@ pub fn process_seccomp_unotify (
 		let syscall_name = match syscall_name {
 			Ok(val)	=> val,
 			Err(e)	=> {
-				format!("unresolved syscall ({:#?})", e)
+				eprintln!("Could not resolve syscall: {:#?}", e);
+				let response = libseccomp::ScmpNotifResp::new_continue(
+					request.id,
+					libseccomp::ScmpNotifRespFlags::empty(),
+				);
+				match response.respond(fd) {
+					Ok(_)	=> {}
+					Err(e)	=> {
+						eprintln!("Could not respond to syscall: {e:#?}");
+					}
+				};
+				continue;
 			}
 		};
 
@@ -116,7 +127,8 @@ pub async fn compile_filter (
 				}
 			};
 			let result = filter.set_act_badarch(
-				libseccomp::ScmpAction::Errno(1));
+				libseccomp::ScmpAction::KillThread,
+			);
 
 			match result {
 				Ok(_) => {},
@@ -856,6 +868,16 @@ pub fn compile_syscall_list(
 	let mut denied_syscalls: Vec<libseccomp::ScmpSyscall> = vec![];
 	let mut debug_syscalls: Vec<libseccomp::ScmpSyscall> = vec![];
 	let mut lockdown_syscalls: Vec<libseccomp::ScmpSyscall> = vec![];
+
+
+	/*
+		HACK: allow 65535 syscall for wine
+	*/
+	{
+		let syscall = libseccomp::ScmpSyscall::from(65535);
+		allowed_syscalls.push(syscall);
+	}
+
 
 	for val in allowed_syscall_group.iter() {
 		for name in val.iter() {
