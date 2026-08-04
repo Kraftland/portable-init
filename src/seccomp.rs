@@ -296,6 +296,7 @@ pub fn compile_syscall_list(
 			"io_pgetevents".into(),
 			"io_pgetevents_time64".into(),
 			"io_uring_setup".into(),
+			"io_uring_enter".into(),
 		],
 		basic_io: vec![
 			"_llseek".into(),
