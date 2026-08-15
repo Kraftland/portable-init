@@ -18,21 +18,6 @@ async fn main() -> std::process::ExitCode {
 	let cancel_token_clone = cancel_token.clone();
 	let replacer_spawn = tokio::spawn(process_env::Replacer::new(cancel_token_clone));
 
-
-	let config_opts = {
-		match envs::get_configurations() {
-			Ok(conf) => conf,
-			Err(e) => {
-				logger::log_fatal(format!("{e}:?"));
-				return std::process::ExitCode::FAILURE;
-			}
-		}
-	};
-
-	logger::log_debug(
-		format!("Got configurations: {config_opts:#?}"),
-	);
-
 	let seccomp_result = tokio::task::spawn_blocking(move || {
 		match seccomp::compile_syscall_list() {
 			Ok(v)	=> v,
@@ -45,12 +30,33 @@ async fn main() -> std::process::ExitCode {
 		}
 	});
 
-	let uclamp_result = tokio::task::spawn_blocking(
-		move || {
-			match uclamp::apply_uclamp() {
-				Ok(v)	=> {
+	let config_opts = {
+		match envs::get().await {
+			Ok(v)	=> v,
+			Err(e)	=> {
+				logger::log_fatal(
+					format!("Could not obtain configurations via IPC: {e:#?}")
+				);
+				panic!("Could not obtain configurations via IPC: {e:#?}");
+			}
+		}
+	};
+
+	#[cfg(debug_assertions)]
+	logger::log_debug(
+		format!("Got configurations: {config_opts:#?}"),
+	);
+
+
+	let conf_clone = config_opts.clone();
+	let uclamp_result = tokio::task::spawn(
+		async {
+			match uclamp::apply_uclamp(
+				conf_clone
+			).await {
+				Ok((min, max))	=> {
 					logger::log_debug(
-						format!("Successfully set uclamp.max to {v:?}"),
+						format!("Successfully set uclamp.max to {min:?}:{max:?}"),
 					);
 				},
 				Err(e)	=> {
@@ -145,11 +151,10 @@ async fn main() -> std::process::ExitCode {
 		}
 	};
 
-	let conf_clone = config_opts.clone();
 	let spawner = {
 		let cancel_clone = cancel_token.clone();
 		let spawner = spawn::Spawner::new(
-			&conf_clone,
+			&config_opts,
 			replacer,
 			cancel_clone,
 			counter,
@@ -167,9 +172,9 @@ async fn main() -> std::process::ExitCode {
 
 	let spawner_clone = spawner.clone();
 	let conf_clone = config_opts.clone();
-	let bus_connect_result = tokio::spawn(async move {
-		let result = ipc::IPC::connect(
-			&conf_clone,
+	let bus_publish_result = tokio::spawn(async move {
+		let result = ipc::IPC::publish(
+			conf_clone,
 			replacer_clone,
 			spawner_clone,
 		).await;
@@ -187,23 +192,23 @@ async fn main() -> std::process::ExitCode {
 		}
 	});
 
-	let ipc_object = match bus_connect_result.await {
+	spawner.spawn(
+		spawn::SpawnMessage::Start {
+			target: config_opts.target.to_string(),
+			args: config_opts.args.clone(),
+			stream: false,
+			reply: None,
+			envs: None,
+		}
+	).await;
+
+	let ipc_object = match bus_publish_result.await {
 		Ok(val)	=>	val,
 		Err(e)	=>	{
 			logger::log_fatal(format!("Could not connect to Session Bus: {e:#?}"));
 			return std::process::ExitCode::FAILURE;
 		}
 	};
-
-	spawner.spawn(
-		spawn::SpawnMessage::Start {
-			target: config_opts.target,
-			args: config_opts.args,
-			stream: false,
-			reply: None,
-			envs: None,
-		}
-	).await;
 
 	task_tracker.close();
 

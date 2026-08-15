@@ -1,19 +1,18 @@
 use thiserror::Error;
-use serde::{Deserialize,Serialize};
+
+mod bus;
+mod app_id;
 
 #[derive(Error, Debug)]
 pub enum EnvsError {
-	#[error("Unrecognised {0:?} environment {1:#?}")]
-	InvalidEnvError(String, String),
+	#[error("D-Bus error resolving configuration: {0:#?}")]
+	BusError(zbus::Error),
 
-	#[error("Failed to get sandbox ID: {0:#?}")]
-	AppIDError(std::env::VarError),
+	#[error("Error connecting to D-Bus")]
+	ConnectBusError(crate::ipc::BusError),
 
-	#[error("Malformed environment variable: {0:#?}")]
-	NonUnicodeError(std::env::VarError),
-
-	#[error("Failed to decode _portableHelperExtraFiles: {0:#?}: {1:#?}")]
-	PassFilesError(String, serde_json::Error),
+	#[error("Argument mismatch for command line")]
+	ArgError,
 }
 
 #[derive(Debug, Clone)]
@@ -30,183 +29,45 @@ pub struct ConfigOpts {
 
 	pub target:		String,
 	pub args:		Vec<String>,
+	pub bus_conn:		zbus::Connection,
+	pub uclamp_min:		u32,
+	pub uclamp_max:		u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "PascalCase")]
-struct PassFiles {
-	file_map:		std::collections::HashMap<String, String>
-}
+/**
+	Get configurations via D-Bus IPC
+*/
+pub async fn get() -> Result<std::sync::Arc<ConfigOpts>, EnvsError> {
 
-fn get_pass_files_env() -> Result<PassFiles, EnvsError> {
-	let files_json = std::env::var("_portableHelperExtraFiles");
-	let mut files_map: std::collections::HashMap<String,String> = std::collections::HashMap::new();
-	let files_json = match files_json {
-		Ok(val)	=> val,
-		Err(e)	=> {
-			if e == std::env::VarError::NotPresent {
-				return Ok(
-					PassFiles {
-						file_map: files_map,
-					},
-				)
-			} else {
-				return Err(EnvsError::NonUnicodeError(e));
+	let appid = app_id::get()?;
+
+	let daemon_name = format!("top.kimiblock.portable.{}", &appid);
+
+	let bus_connection = crate::ipc::IPC::connect()
+		.await
+		.map_err(EnvsError::ConnectBusError)
+		?;
+
+	let init_config = bus::get(&bus_connection, &daemon_name)
+		.await
+		.map_err(EnvsError::BusError)
+		?;
+
+	Ok(
+		std::sync::Arc::new(
+			ConfigOpts {
+				lockdown:		init_config.lockdown,
+				has_flatpak_info:	init_config.flatpak_info,
+				debugging:		init_config.allow_debug,
+				sandbox_id:		appid,
+				file_map:		init_config.extra_files,
+				inhibit:		init_config.inhibit_suspend,
+				target:			init_config.target_exec,
+				args:			init_config.target_args,
+				bus_conn:		bus_connection,
+				uclamp_min:		init_config.uclamp_min,
+				uclamp_max:		init_config.uclamp_max,
 			}
-		}
-	};
-	let deserialised: Result<PassFiles, serde_json::Error> = serde_json::from_str(&files_json);
-	match deserialised {
-		Ok(val)	=> {
-			for (k, v) in val.file_map {
-				if v == "unknown" {
-					continue
-				};
-				files_map.insert(k, v);
-			};
-			Ok(PassFiles { file_map: files_map })
-		},
-		Err(e)	=> {
-			Err(EnvsError::PassFilesError(files_json, e))
-		}
-	}
-}
-
-pub fn get_configurations() -> Result<ConfigOpts, EnvsError> {
-	let passed_files = match get_pass_files_env() {
-		Ok(val)	=>	val,
-		Err(e)	=>	return Err(e),
-	};
-
-	let has_inhibit = match std::env::var("_portableInhibit") {
-		Ok(val)	=> {
-			if val == "1" {
-				true
-			} else {
-				false
-			}
-		},
-		Err(e)	=> {
-			if e == std::env::VarError::NotPresent {
-				false
-			} else {
-				return Err(
-					EnvsError::NonUnicodeError(e),
-				);
-			}
-		}
-	};
-
-	let has_info: bool;
-
-	let app_id: String;
-
-	match std::env::var("appID") {
-		Ok(val)	=> {app_id = val}
-		Err(e)	=> {
-			return Err(EnvsError::AppIDError(e));
-		}
-	}
-
-	let info_env = std::env::var("_portableHasFlatpakInfo");
-	match info_env {
-		Ok(val)	=> {
-			if val == "1" {
-				has_info = true
-			} else {
-				return Err(
-					EnvsError::InvalidEnvError(
-						"_portableHasFlatpakInfo".into(),
-						val,
-					)
-				);
-			}
-		}
-		Err(e)	=> {
-			if e == std::env::VarError::NotPresent {
-				has_info = false
-			} else {
-				return Err(
-					EnvsError::NonUnicodeError(e)
-				)
-			}
-		}
-	}
-
-	let lockdown_env = std::env::var("_portableLockdown");
-
-	let lockdown_env = match lockdown_env {
-		Ok(val) => val,
-		Err(e) => {
-			if e == std::env::VarError::NotPresent {
-				"".to_string()
-			} else {
-				return Err(
-					EnvsError::NonUnicodeError(e)
-				)
-			}
-		}
-	};
-
-	let is_lockdown = {
-		match lockdown_env.as_str() {
-			"with-info" | "without-info"	=> {true}
-			_				=> {false}
-		}
-	};
-
-	let mut is_debugging: bool = false;
-	let debug_env = std::env::var("_portableAllowDebugging");
-	match debug_env {
-		Ok(val) => {
-			if val == "1" {
-				is_debugging = true;
-			}
-		}
-		Err(_) => {}
-	};
-
-
-
-
-
-	let target = {
-		match std::env::var("_portableLaunchTarget") {
-			Ok(v)	=> {v}
-			Err(e)	=> {
-				return Err(
-					EnvsError::InvalidEnvError(
-						"_portableLaunchTarget".into(),
-						format!("{e:#?}"),
-					)
-				);
-			}
-		}
-	};
-
-	let args = {
-		let mut os_args = std::env::args_os();
-		let _exec_name = os_args.next(); // looks like the first next call returns index 0?
-		let mut args: Vec<String> = vec![];
-		if os_args.len() >= 1 {
-			loop {
-				match os_args.next() {
-					Some(v)	=> {args.push(v.into_string().unwrap());}
-					None	=> {break}
-				}
-			}
-		};
-		args
-	};
-
-	Ok(ConfigOpts {
-		lockdown: is_lockdown,
-		has_flatpak_info: has_info,
-		debugging: is_debugging,
-		sandbox_id: app_id,
-		file_map: passed_files.file_map,
-		inhibit: has_inhibit,
-		target: target,
-		args: args,
-	})
+		)
+	)
 }
