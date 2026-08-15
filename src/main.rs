@@ -130,6 +130,38 @@ async fn main() -> std::process::ExitCode {
 		}
 	};
 
+	{
+		let list = match seccomp_result.await {
+			Ok(v)	=> {v}
+			Err(e)	=> {
+				logger::log_fatal(format!("Could not compile seccomp list: {e:#?}"));
+				panic!("{e:#?}");
+			}
+		};
+
+		let filter = match seccomp::compile_filter(
+			config_opts.clone(),
+			&list,
+		).await {
+			Ok(v)	=> v,
+			Err(e)	=> {
+				logger::log_fatal(format!("Could not compile seccomp filter: {e:#?}"));
+				panic!("{e:#?}");
+			}
+		};
+		let fd = match seccomp::load_seccomp_filter(filter) {
+			Ok(v)	=> v,
+			Err(e)	=> {
+				logger::log_fatal(format!("Could load seccomp filter: {e:#?}"));
+				panic!("{e:#?}");
+			}
+		};
+		let cancel_token = cancel_token.clone();
+		std::thread::spawn(move || {
+			seccomp::process_seccomp_unotify(fd, cancel_token)
+		})
+	};
+
 	let landlock_rules = landlock_result.await.unwrap();
 
 	{
@@ -137,16 +169,6 @@ async fn main() -> std::process::ExitCode {
 			Ok(_)	=> {}
 			Err(e)	=> {
 				logger::log_warn(format!("Could not spawn uclamp setter: {e:#?}"));
-			}
-		}
-	};
-
-	let seccomp_list = {
-		match seccomp_result.await {
-			Ok(v)	=> {v}
-			Err(e)	=> {
-				logger::log_fatal(format!("Could not compile seccomp list: {e:#?}"));
-				panic!("{e:#?}");
 			}
 		}
 	};
@@ -159,7 +181,6 @@ async fn main() -> std::process::ExitCode {
 			cancel_clone,
 			counter,
 			landlock_rules,
-			seccomp_list,
 		);
 		match spawner.await {
 			Ok(v)	=> v,
