@@ -5,7 +5,7 @@ const INIT_APIVER: u32 = 18;
 struct Init {
 	replacer:	crate::process_env::Replacer,
 	spawner:	crate::spawn::Spawner,
-	conf:		crate::envs::ConfigOpts,
+	conf:		std::sync::Arc<crate::envs::ConfigOpts>,
 }
 
 #[derive(Debug, zbus::DBusError)]
@@ -343,11 +343,12 @@ impl IPC {
 	}
 
 	pub async fn publish(
-		bus:		zbus::Connection,
-		conf:		&crate::envs::ConfigOpts,
+		conf:		std::sync::Arc<crate::envs::ConfigOpts>,
 		replace_ipc:	crate::process_env::Replacer,
 		spawner:	crate::spawn::Spawner,
 	) -> Result<Self, BusError> {
+
+		let bus = conf.bus_conn.clone();
 
 		let bus_name = format!("{}.Portable.Helper", conf.sandbox_id);
 

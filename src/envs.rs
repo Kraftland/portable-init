@@ -1,23 +1,10 @@
 use thiserror::Error;
-use serde::{Deserialize,Serialize};
 
 mod bus;
 mod app_id;
 
 #[derive(Error, Debug)]
 pub enum EnvsError {
-	#[error("Unrecognised {0:?} environment {1:#?}")]
-	InvalidEnvError(String, String),
-
-	#[error("Failed to get sandbox ID: {0:#?}")]
-	AppIDError(std::env::VarError),
-
-	#[error("Malformed environment variable: {0:#?}")]
-	NonUnicodeError(std::env::VarError),
-
-	#[error("Failed to decode _portableHelperExtraFiles: {0:#?}: {1:#?}")]
-	PassFilesError(String, serde_json::Error),
-
 	#[error("D-Bus error resolving configuration: {0:#?}")]
 	BusError(zbus::Error),
 
@@ -43,12 +30,8 @@ pub struct ConfigOpts {
 	pub target:		String,
 	pub args:		Vec<String>,
 	pub bus_conn:		zbus::Connection,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "PascalCase")]
-struct PassFiles {
-	file_map:		std::collections::HashMap<String, String>
+	pub uclamp_min:		u8,
+	pub uclamp_max:		u8,
 }
 
 /**
@@ -82,6 +65,8 @@ pub async fn get() -> Result<std::sync::Arc<ConfigOpts>, EnvsError> {
 				target:			init_config.target_exec,
 				args:			init_config.target_args,
 				bus_conn:		bus_connection,
+				uclamp_min:		init_config.uclamp_min,
+				uclamp_max:		init_config.uclamp_max,
 			}
 		)
 	)
