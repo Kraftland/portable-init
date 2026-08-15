@@ -325,35 +325,41 @@ impl IPC {
 		}
 	}
 
-	pub async fn connect(
-		conf: &crate::envs::ConfigOpts,
-		replace_ipc: crate::process_env::Replacer,
-		spawner: crate::spawn::Spawner,
-	) -> Result<Self, BusError> {
+	/**
+		Connect to the session bus and does not publish IPC objects.
 
-		let conn = zbus::connection::Builder::session();
-		let conn = match conn {
-			Ok(val)	=> val,
-			Err(e)	=> return Err(BusError::ConnectError(e))
-		};
+		Does not register a well-known name.
+	*/
+	pub async fn connect() -> Result<zbus::Connection, BusError> {
+		let builder = zbus::connection::Builder::session()
+			.map_err(BusError::ConnectError)
+			?;
+
+		builder
+			.allow_name_replacements(false)
+			.build()
+			.await
+			.map_err(BusError::ConnectError)
+	}
+
+	pub async fn publish(
+		bus:		zbus::Connection,
+		conf:		&crate::envs::ConfigOpts,
+		replace_ipc:	crate::process_env::Replacer,
+		spawner:	crate::spawn::Spawner,
+	) -> Result<Self, BusError> {
 
 		let bus_name = format!("{}.Portable.Helper", conf.sandbox_id);
 
-		let conn = match conn.name(bus_name) {
-			Ok(val)	=> val,
-			Err(e)	=> return Err(BusError::ConnectError(e))
-		};
-
-		let conn = conn.allow_name_replacements(false);
+		bus.request_name(bus_name)
+			.await
+			.map_err(BusError::ConnectError)
+			?;
 
 		let daemon_name = format!("top.kimiblock.portable.{}", conf.sandbox_id);
 
-		let conn = match conn.build().await {
-			Ok(val)	=> val,
-			Err(e)	=> return Err(BusError::ConnectError(e))
-		};
-
-		let result = conn.object_server()
+		let result = bus
+			.object_server()
 			.at(
 				"/top/kimiblock/portable/init",
 				Init{
@@ -367,7 +373,7 @@ impl IPC {
 			Ok(_)	=> {
 				Ok(
 					Self {
-						connection: conn,
+						connection: bus,
 						daemon_bus_name: daemon_name,
 					},
 				)
