@@ -10,7 +10,6 @@ struct Init {
 
 #[derive(Debug, zbus::DBusError)]
 enum AuxStartError {
-	RecvError(String),
 	ReplaceError(String),
 }
 

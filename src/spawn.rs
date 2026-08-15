@@ -7,9 +7,6 @@ pub enum SpawnError {
 
 	#[error("Could not clone landlock rules: {0:#?}")]
 	CloneLandlockError(std::io::Error),
-
-	#[error("Could not open pty for streaming: {0:#?}")]
-	OpenPtyError(nix::Error),
 }
 
 /**
@@ -40,19 +37,13 @@ pub enum SpawnMessage {
 	}
 }
 
-#[derive(Debug)]
-pub struct StartReply {
-	// File descriptor for the slave pty
-	pub master_fd: std::os::fd::OwnedFd,
-}
-
 impl Spawner {
 	pub async fn spawn (self: &Self, msg: SpawnMessage) {
 		self.tx.send(msg).await.unwrap();
 	}
 
 	pub async fn new(
-		conf: &crate::envs::ConfigOpts,
+		conf:	std::sync::Arc<crate::envs::ConfigOpts>,
 		replacer: crate::process_env::Replacer,
 		cancel_token: tokio_util::sync::CancellationToken,
 		counter: crate::counter::Counter,
@@ -69,7 +60,7 @@ impl Spawner {
 				counter,
 				landlock_rules,
 				seccomp_list,
-				conf.clone(),
+				conf,
 			),
 		);
 
@@ -86,7 +77,7 @@ async fn run(
 	counter:	crate::counter::Counter,
 	landlock_rules:	landlock::RulesetCreated,
 	seccomp_list:	crate::seccomp::SyscallList,
-	conf:		crate::envs::ConfigOpts,
+	conf:		std::sync::Arc<crate::envs::ConfigOpts>,
 ) {
 	loop {
 		let msg = tokio::select! {
@@ -116,7 +107,8 @@ async fn run(
 				}
 		};
 		let seccomp_list = seccomp_list.clone();
-		let conf_clone = conf.clone();
+
+		let conf = conf.clone();
 
 		tokio::spawn(async move {
 			{
@@ -127,7 +119,7 @@ async fn run(
 
 			{
 				let filter = match crate::seccomp::compile_filter(
-					&conf_clone,
+					conf.clone(),
 					&seccomp_list,
 				).await {
 					Ok(v)	=> v,

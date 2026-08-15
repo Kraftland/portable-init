@@ -18,7 +18,7 @@ pub enum EnvsError {
 	FDConvertError(std::convert::Infallible),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ConfigOpts {
 	pub lockdown:		bool,
 	pub has_flatpak_info:	bool,
@@ -35,6 +35,8 @@ pub struct ConfigOpts {
 	pub bus_conn:		zbus::Connection,
 	pub uclamp_min:		u32,
 	pub uclamp_max:		u32,
+
+	pub pty_fd:		std::os::fd::OwnedFd,
 }
 
 /**
@@ -53,7 +55,6 @@ pub async fn get() -> Result<std::sync::Arc<ConfigOpts>, EnvsError> {
 
 	let init_config = bus::get(&bus_connection, &daemon_name)
 		.await
-		.map_err(EnvsError::BusError)
 		?;
 
 	Ok(
@@ -70,6 +71,7 @@ pub async fn get() -> Result<std::sync::Arc<ConfigOpts>, EnvsError> {
 				bus_conn:		bus_connection,
 				uclamp_min:		init_config.uclamp_min,
 				uclamp_max:		init_config.uclamp_max,
+				pty_fd:			init_config.pty_fd,
 			}
 		)
 	)
