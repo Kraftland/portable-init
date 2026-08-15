@@ -48,13 +48,15 @@ async fn main() -> std::process::ExitCode {
 	);
 
 
-
-	let uclamp_result = tokio::task::spawn_blocking(
-		move || {
-			match uclamp::apply_uclamp() {
-				Ok(v)	=> {
+	let conf_clone = config_opts.clone();
+	let uclamp_result = tokio::task::spawn(
+		async {
+			match uclamp::apply_uclamp(
+				conf_clone
+			).await {
+				Ok((min, max))	=> {
 					logger::log_debug(
-						format!("Successfully set uclamp.max to {v:?}"),
+						format!("Successfully set uclamp.max to {min:?}:{max:?}"),
 					);
 				},
 				Err(e)	=> {

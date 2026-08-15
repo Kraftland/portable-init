@@ -30,8 +30,8 @@ pub struct ConfigOpts {
 	pub target:		String,
 	pub args:		Vec<String>,
 	pub bus_conn:		zbus::Connection,
-	pub uclamp_min:		u8,
-	pub uclamp_max:		u8,
+	pub uclamp_min:		u32,
+	pub uclamp_max:		u32,
 }
 
 /**

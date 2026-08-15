@@ -15,8 +15,8 @@ trait Info {
 		bool,
 		String,
 		Vec<String>,
-		u8,
-		u8,
+		u32,
+		u32,
 	)>;
 }
 
@@ -63,14 +63,14 @@ pub struct InitInfo {
 
 		It is clamped between 0 and 100, as per cgroup v2 specifications.
 	*/
-	pub uclamp_min:		u8,
+	pub uclamp_min:		u32,
 	/**
 		uclamp_max describes the maximum performance operating point.
 		It operates as a ceiling limit.
 
 		It is clamped between 0 and 100, as per cgroup v2 specifications.
 	*/
-	pub uclamp_max:		u8,
+	pub uclamp_max:		u32,
 }
 
 /**
