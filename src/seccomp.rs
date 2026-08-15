@@ -112,8 +112,8 @@ pub fn process_seccomp_unotify (
 }
 
 pub async fn compile_filter (
-	config_env: &crate::envs::ConfigOpts,
-	syscall_list: &SyscallList,
+	config_env:	std::sync::Arc<crate::envs::ConfigOpts>,
+	syscall_list:	&SyscallList,
 ) -> Result<libseccomp::ScmpFilterContext, SeccompError> {
 	let mut filter_result = match config_env.lockdown {
 		true	=>	{

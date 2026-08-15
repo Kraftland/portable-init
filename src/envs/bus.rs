@@ -18,6 +18,11 @@ trait Info {
 		u32,
 		u32,
 	)>;
+
+	#[zbus(
+		name	= "StreamPty",
+	)]
+	async fn stream(&self) -> zbus::Result<zbus::zvariant::OwnedFd>;
 }
 
 /**
@@ -71,6 +76,11 @@ pub struct InitInfo {
 		It is clamped between 0 and 100, as per cgroup v2 specifications.
 	*/
 	pub uclamp_max:		u32,
+
+	/**
+		the file descriptor for initial pty streaming
+	*/
+	pub pty_fd:		std::os::fd::OwnedFd,
 }
 
 /**
@@ -83,12 +93,25 @@ pub struct InitInfo {
 	will therefore contact the controller. Thus, we can manipulate the started atomic boolean
 	inside AuxStart struct to clearly indicate whether the Init system has started.
 */
-pub async fn get(bus: &zbus::Connection, daemon_name: &str) -> Result<InitInfo, zbus::Error> {
+pub async fn get(bus: &zbus::Connection, daemon_name: &str) -> Result<InitInfo, super::EnvsError> {
 	let proxy = InfoProxy::new(bus, daemon_name)
 		.await
+		.map_err(super::EnvsError::BusError)
 		?;
 
-	let info = proxy.get().await?;
+	let info = proxy
+		.get()
+		.await
+		.map_err(super::EnvsError::BusError)
+		?;
+
+	use std::os::fd::OwnedFd;
+
+	let pty = proxy
+		.stream()
+		.await
+		.map_err(super::EnvsError::BusError)
+		?;
 
 	let ret = InitInfo {
 		extra_files:		info.0,
@@ -100,6 +123,9 @@ pub async fn get(bus: &zbus::Connection, daemon_name: &str) -> Result<InitInfo, 
 		target_args:		info.6,
 		uclamp_min:		info.7,
 		uclamp_max:		info.8,
+		pty_fd:			OwnedFd::try_from(pty)
+						.map_err(super::EnvsError::FDConvertError)
+						?,
 	};
 
 	Ok(ret)

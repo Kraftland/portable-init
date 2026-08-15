@@ -7,9 +7,19 @@ pub enum SpawnError {
 
 	#[error("Could not clone landlock rules: {0:#?}")]
 	CloneLandlockError(std::io::Error),
+}
 
-	#[error("Could not open pty for streaming: {0:#?}")]
-	OpenPtyError(nix::Error),
+/**
+	Designates the mode of console handling
+
+	Direct means stream to Init's stdin/out/error, and is deprecated
+
+	WithPty connects the processes' stdin/out/error to the pty
+*/
+#[derive(Debug)]
+pub enum StreamConsole {
+	Direct,
+	WithPty { fd: std::os::fd::OwnedFd },
 }
 
 #[derive(Clone)]
@@ -22,16 +32,9 @@ pub enum SpawnMessage {
 	Start {
 		target:	String,
 		args:	Vec<String>,
-		stream:	bool,
-		reply:	Option<tokio::sync::oneshot::Sender<StartReply>>,
+		stream:	StreamConsole,
 		envs: Option<std::collections::HashMap<String, String>>,
 	}
-}
-
-#[derive(Debug)]
-pub struct StartReply {
-	// File descriptor for the slave pty
-	pub master_fd: std::os::fd::OwnedFd,
 }
 
 impl Spawner {
@@ -40,7 +43,7 @@ impl Spawner {
 	}
 
 	pub async fn new(
-		conf: &crate::envs::ConfigOpts,
+		conf:	std::sync::Arc<crate::envs::ConfigOpts>,
 		replacer: crate::process_env::Replacer,
 		cancel_token: tokio_util::sync::CancellationToken,
 		counter: crate::counter::Counter,
@@ -57,7 +60,7 @@ impl Spawner {
 				counter,
 				landlock_rules,
 				seccomp_list,
-				conf.clone(),
+				conf,
 			),
 		);
 
@@ -74,7 +77,7 @@ async fn run(
 	counter:	crate::counter::Counter,
 	landlock_rules:	landlock::RulesetCreated,
 	seccomp_list:	crate::seccomp::SyscallList,
-	conf:		crate::envs::ConfigOpts,
+	conf:		std::sync::Arc<crate::envs::ConfigOpts>,
 ) {
 	loop {
 		let msg = tokio::select! {
@@ -104,7 +107,8 @@ async fn run(
 				}
 		};
 		let seccomp_list = seccomp_list.clone();
-		let conf_clone = conf.clone();
+
+		let conf = conf.clone();
 
 		tokio::spawn(async move {
 			{
@@ -115,7 +119,7 @@ async fn run(
 
 			{
 				let filter = match crate::seccomp::compile_filter(
-					&conf_clone,
+					conf.clone(),
 					&seccomp_list,
 				).await {
 					Ok(v)	=> v,
@@ -170,7 +174,7 @@ async fn run(
 			};
 
 			match msg {
-				SpawnMessage::Start { target, args, stream, reply, envs } => {
+				SpawnMessage::Start { target, args, stream, envs } => {
 					let args_new = replacer_clone.rewrite(args);
 					let args_new = match args_new.await {
 						Ok(v)	=> {v}
@@ -209,54 +213,42 @@ async fn run(
 						}
 					};
 
-					let command = if stream {
-
-						let pty_pair = {
-							match nix::pty::openpty(None, None)
-								.map_err(SpawnError::OpenPtyError)
-							{
+					let command = match stream {
+						StreamConsole::Direct		=> {
+							command
+						}
+						StreamConsole::WithPty { fd }	=> {
+							let stdin = match fd.try_clone() {
 								Ok(v)	=> v,
 								Err(e)	=> {
-									crate::logger::log_fatal(
-									format!("{e:#?}"),
+									crate::logger::log_warn(
+										format!(
+										"Could not clone pty: {e:#?}")
 									);
-									panic!("{e:#?}")
+									return;
 								}
-							}
-						};
+							};
+							command.stdin(stdin);
 
-						let master = pty_pair.master;
+							let stdout = match fd.try_clone() {
+								Ok(v)	=> v,
+								Err(e)	=> {
+									crate::logger::log_warn(
+										format!(
+										"Could not clone pty: {e:#?}")
+									);
+									return;
+								}
+							};
+							command.stdout(stdout);
 
+							command.stderr(fd);
 
-						let (stdin, stdout, stderr) = {
-							let slave = pty_pair.slave;
-							(
-								slave.try_clone().unwrap(),
-								slave.try_clone().unwrap(),
-								slave,
-							)
-						};
-
-
-
-						command.stdin(stdin);
-						command.stdout(stdout);
-						command.stderr(stderr);
-
-						// unwrap's safe because we should have channels on stream
-						reply.unwrap().send(
-							StartReply {
-								//id: serial,
-								master_fd: master,
-							},
-						).unwrap();
-						command.kill_on_drop(true);
-
-						command
-					} else {
-						command.kill_on_drop(true);
-						command
+							command
+						}
 					};
+
+					command.kill_on_drop(true);
 
 					crate::logger::log_debug(
 						format!("Constructed command: {command:?}"),

@@ -154,7 +154,7 @@ async fn main() -> std::process::ExitCode {
 	let spawner = {
 		let cancel_clone = cancel_token.clone();
 		let spawner = spawn::Spawner::new(
-			&config_opts,
+			config_opts.clone(),
 			replacer,
 			cancel_clone,
 			counter,
@@ -196,8 +196,9 @@ async fn main() -> std::process::ExitCode {
 		spawn::SpawnMessage::Start {
 			target: config_opts.target.to_string(),
 			args: config_opts.args.clone(),
-			stream: false,
-			reply: None,
+			stream: spawn::StreamConsole::WithPty {
+				fd:	config_opts.pty_fd.try_clone().unwrap(),
+			},
 			envs: None,
 		}
 	).await;
