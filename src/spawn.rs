@@ -48,7 +48,6 @@ impl Spawner {
 		cancel_token: tokio_util::sync::CancellationToken,
 		counter: crate::counter::Counter,
 		landlock_rules: landlock::RulesetCreated,
-		seccomp_list: crate::seccomp::SyscallList,
 	) -> Result<Self, SpawnError> {
 		let (tx, rx) = tokio::sync::mpsc::channel::<SpawnMessage>(5);
 
@@ -59,7 +58,6 @@ impl Spawner {
 				rx,
 				counter,
 				landlock_rules,
-				seccomp_list,
 				conf,
 			),
 		);
@@ -76,7 +74,6 @@ async fn run(
 	mut rx:		tokio::sync::mpsc::Receiver<SpawnMessage>,
 	counter:	crate::counter::Counter,
 	landlock_rules:	landlock::RulesetCreated,
-	seccomp_list:	crate::seccomp::SyscallList,
 	conf:		std::sync::Arc<crate::envs::ConfigOpts>,
 ) {
 	loop {
@@ -106,7 +103,6 @@ async fn run(
 					}
 				}
 		};
-		let seccomp_list = seccomp_list.clone();
 
 		let conf = conf.clone();
 
@@ -115,41 +111,6 @@ async fn run(
 				if cancel_clone.is_cancelled() {
 					return;
 				}
-			};
-
-			{
-				let filter = match crate::seccomp::compile_filter(
-					conf.clone(),
-					&seccomp_list,
-				).await {
-					Ok(v)	=> v,
-					Err(e)	=> {
-						crate::logger::log_fatal(
-						 format!("Could not compile seccomp filter: {e:#?}")
-						);
-						panic!("Could not compile seccomp filter: {e:#?}")
-					}
-				};
-				let fd = match crate::seccomp::load_seccomp_filter(
-					filter,
-				) {
-					Ok(v)	=> {v}
-					Err(e)	=> {
-						crate::logger::log_fatal(
-							format!("Could not load seccomp filter: {e:#?}"),
-						);
-						panic!("Could not load seccomp filter: {e:#?}");
-					}
-				};
-				let cancel_clone = cancel_clone.clone();
-				std::thread::spawn(
-					 move || {
-						crate::seccomp::process_seccomp_unotify(
-							fd,
-							cancel_clone.clone(),
-						);
-					}
-				)
 			};
 
 			{
@@ -256,12 +217,17 @@ async fn run(
 
 					let mut result = command
 						.spawn()
-						.unwrap();
+						.expect("Could not spawn command");
 
-					tokio::select! {
+					let status = tokio::select! {
 						_ = cancel_clone.cancelled() => {return}
-						_ = result.wait() => {}
+						v = result.wait() => {v}
 					};
+
+					#[cfg(debug_assertions)]
+					crate::logger::log_debug(
+						format!("Child exited: {status:?}")
+					);
 
 					counter_tx.send(
 						crate::counter::CounterMessage::ProcessDied,

@@ -119,6 +119,7 @@ pub async fn compile_filter (
 		true	=>	{
 			let filter = libseccomp::ScmpFilterContext::new(
 				libseccomp::ScmpAction::Notify,
+				//libseccomp::ScmpAction::Log,
 			);
 			let mut filter = match filter {
 				Ok(val) => val,
@@ -167,6 +168,10 @@ pub async fn compile_filter (
 			return Err(SeccompError::AddRuleError(e));
 		},
 	};
+
+	filter_result.set_ctl_tsync(true)
+		.map_err(SeccompError::AddRuleError)
+		?;
 
 
 
