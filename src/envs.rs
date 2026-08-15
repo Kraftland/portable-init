@@ -13,6 +13,9 @@ pub enum EnvsError {
 
 	#[error("Argument mismatch for command line")]
 	ArgError,
+
+	#[error("FD conversion error: {0:#?}")]
+	FDConvertError(std::convert::Infallible),
 }
 
 #[derive(Debug, Clone)]

@@ -196,7 +196,7 @@ async fn main() -> std::process::ExitCode {
 		spawn::SpawnMessage::Start {
 			target: config_opts.target.to_string(),
 			args: config_opts.args.clone(),
-			stream: false,
+			stream: ,
 			reply: None,
 			envs: None,
 		}

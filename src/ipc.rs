@@ -20,18 +20,19 @@ enum AuxStartError {
 )]
 impl Init {
 	#[zbus(
-		name = "AuxStart2",
-		out_args("master_fd")
+		name		= "AuxStart3",
 	)]
-	async fn request_start (
+	async fn start_with_pty(
 		&self,
-		custom_target: bool,
-		target_exec: String,
-		args_append: bool,
-		arguments: Vec<String>,
-		extra_files: std::collections::HashMap<String, String>,
-		envs: std::collections::HashMap<String, String>,
-	) -> Result<zbus::zvariant::OwnedFd, AuxStartError> {
+		custom_target:	bool,
+		target_exec:	String,
+		args_append:	bool,
+		arguments:	Vec<String>,
+		extra_files:	std::collections::HashMap<String, String>,
+		envs:		std::collections::HashMap<String, String>,
+		pty:		zbus::zvariant::OwnedFd,
+	) -> Result<(), AuxStartError> {
+		#[cfg(debug_assertions)]
 		{
 			let mut log_msg = String::from("Got start request from D-Bus: ");
 			log_msg.push_str(format!("Custom target: {custom_target}; ").as_str());
@@ -76,41 +77,43 @@ impl Init {
 			args.push(val.into());
 		};
 
-
-		let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
-
-		let envs_req = {
-
-			if envs.len() > 0 {
-				let mut map = std::collections::HashMap::<String, String>::new();
-				for (k, v) in envs {
-					map.insert(k.into(), v.into());
-				}
-				Some(map)
-			} else {
-				None
-			}
-		};
-
 		self.spawner.spawn(
 			crate::spawn::SpawnMessage::Start {
 				target: target,
 				args: args,
-				stream: true,
-				reply: Some(reply_tx),
-				envs: envs_req,
+				stream: crate::spawn::StreamConsole::WithPty {
+					fd: pty.into(),
+				},
+				envs: {
+					if envs.len() > 0 {
+						Some(envs)
+					} else {
+						None
+					}
+				},
 			}
 		).await;
+		Ok(())
+	}
 
-		let reply = reply_rx.await;
-		match reply {
-			Ok(v)	=> {
-				Ok(zbus::zvariant::OwnedFd::from(v.master_fd))
-			}
-			Err(e)	=> {
-				Err(AuxStartError::RecvError(format!("{e:#?}")))
-			}
-		}
+	#[zbus(
+		name = "AuxStart2",
+		out_args("master_fd")
+	)]
+	async fn request_start (
+		&self,
+		_custom_target: bool,
+		_target_exec: String,
+		_args_append: bool,
+		_arguments: Vec<String>,
+		_extra_files: std::collections::HashMap<String, String>,
+		_envs: std::collections::HashMap<String, String>,
+	) -> zbus::fdo::Result<zbus::zvariant::OwnedFd> {
+		Err(
+			zbus::fdo::Error::NotSupported(
+				"The AuxStart2 endpoint is deprecated and removed".into()
+			)
+		)
 	}
 
 	#[zbus(
