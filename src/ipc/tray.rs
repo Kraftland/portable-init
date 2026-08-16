@@ -23,6 +23,7 @@ pub async fn wake() -> zbus::fdo::Result<()> {
 			Err(e)	=> {
 				match e {
 					zbus::Error::InterfaceNotFound	=> {}
+					zbus::Error::MethodError	=> {}
 					_				=> {
 						crate::logger::log_warn(
 							format!("Could not activate name {name}: {e:#?}")
