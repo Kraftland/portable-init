@@ -19,10 +19,16 @@ pub async fn wake() -> zbus::fdo::Result<()> {
 
 	for name in names {
 		match wake_name(&conn, &name).await {
-			Ok(_)	=> {}
+			Ok(_)	=> {
+				#[cfg(debug_assertions)]
+				crate::logger::log_debug(
+					format!("Successfully woke {name} up")
+				);
+			}
 			Err(e)	=> {
 				match e {
 					zbus::Error::InterfaceNotFound	=> {}
+					zbus::Error::MethodError(_,_,_)	=> {}
 					_				=> {
 						crate::logger::log_warn(
 							format!("Could not activate name {name}: {e:#?}")
