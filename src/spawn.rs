@@ -4,9 +4,6 @@ use thiserror::Error;
 pub enum SpawnError {
 	#[error("Could not send message via channel: {0:#?}")]
 	ChannelSendError(tokio::sync::mpsc::error::SendError<crate::counter::CounterMessage>),
-
-	#[error("Could not clone landlock rules: {0:#?}")]
-	CloneLandlockError(std::io::Error),
 }
 
 /**
@@ -43,11 +40,9 @@ impl Spawner {
 	}
 
 	pub async fn new(
-		conf:	std::sync::Arc<crate::envs::ConfigOpts>,
 		replacer: crate::process_env::Replacer,
 		cancel_token: tokio_util::sync::CancellationToken,
 		counter: crate::counter::Counter,
-		landlock_rules: landlock::RulesetCreated,
 	) -> Result<Self, SpawnError> {
 		let (tx, rx) = tokio::sync::mpsc::channel::<SpawnMessage>(5);
 
@@ -57,8 +52,6 @@ impl Spawner {
 				replacer,
 				rx,
 				counter,
-				landlock_rules,
-				conf,
 			),
 		);
 
@@ -73,8 +66,6 @@ async fn run(
 	replacer:	crate::process_env::Replacer,
 	mut rx:		tokio::sync::mpsc::Receiver<SpawnMessage>,
 	counter:	crate::counter::Counter,
-	landlock_rules:	landlock::RulesetCreated,
-	conf:		std::sync::Arc<crate::envs::ConfigOpts>,
 ) {
 	loop {
 		let msg = tokio::select! {
@@ -90,41 +81,10 @@ async fn run(
 		let replacer_clone = replacer.clone();
 		let counter_tx = counter.send_channel.clone();
 
-		let landlock_rules_clone = {
-			match landlock_rules
-				.try_clone()
-				.map_err(SpawnError::CloneLandlockError) {
-					Ok(v)	=> v,
-					Err(e)	=> {
-						crate::logger::log_fatal(
-							format!("{e:#?}"),
-						);
-						panic!("{e:#?}");
-					}
-				}
-		};
-
-		let conf = conf.clone();
-
 		tokio::spawn(async move {
 			{
 				if cancel_clone.is_cancelled() {
 					return;
-				}
-			};
-
-			{
-				if conf.lockdown {
-					match crate::landlock::load_landlock(landlock_rules_clone) {
-					Ok(_)	=> {
-						crate::logger::log_debug("Loaded landlock rules".into());
-					}
-					Err(e)	=> {
-						crate::logger::log_fatal(
-							format!("Could not load landlock rules: {e:#?}"),
-						);
-					}
-					};
 				}
 			};
 

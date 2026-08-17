@@ -70,7 +70,10 @@ async fn main() -> std::process::ExitCode {
 
 	let conf_clone = config_opts.clone();
 	let landlock_result = tokio::spawn(async move {
-		match landlock::compile_landlock_rules(&conf_clone).await {
+		if ! conf_clone.lockdown {
+			return;
+		}
+		let rules = match landlock::compile_landlock_rules(&conf_clone).await {
 			Ok(v)	=> v,
 			Err(e)	=> {
 				logger::log_fatal(
@@ -78,7 +81,11 @@ async fn main() -> std::process::ExitCode {
 				);
 				panic!("Could not compile landlock rules: {e:#?}")
 			}
-		}
+		};
+
+		landlock::load_landlock(rules)
+			.await
+			.expect("Could not load landlock rules");
 	});
 
 	let cancel_token_clone = cancel_token.clone();
@@ -162,7 +169,9 @@ async fn main() -> std::process::ExitCode {
 		})
 	};
 
-	let landlock_rules = landlock_result.await.unwrap();
+	landlock_result
+		.await
+		.expect("Could not load landlock rules");
 
 	{
 		match uclamp_result.await {
@@ -176,11 +185,9 @@ async fn main() -> std::process::ExitCode {
 	let spawner = {
 		let cancel_clone = cancel_token.clone();
 		let spawner = spawn::Spawner::new(
-			config_opts.clone(),
 			replacer,
 			cancel_clone,
 			counter,
-			landlock_rules,
 		);
 		match spawner.await {
 			Ok(v)	=> v,
