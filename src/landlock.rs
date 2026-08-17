@@ -8,7 +8,7 @@ use landlock::{
 	RulesetCreatedAttr,
 };
 
-const ABI: landlock::ABI = landlock::ABI::V6;
+const ABI: landlock::ABI = landlock::ABI::V8;
 
 #[derive(Debug, Error)]
 pub enum LandlockError {
@@ -123,67 +123,57 @@ pub async fn compile_landlock_rules (conf: &crate::envs::ConfigOpts) -> Result<l
 		},
 	};
 
-	let rule = rule.set_compatibility(CompatLevel::HardRequirement).create();
-	let rule_set = match rule {
-		Ok(val)	=> val,
-		Err(e)	=> {return Err(LandlockError::InitFilterError(e));},
-	};
+	let rule_set = rule
+		.set_compatibility(CompatLevel::HardRequirement)
+		.create()
+		.map_err(LandlockError::InitFilterError)
+		?;
 
 
-	let result = rule_set.add_rules(
+	let rule_set = rule_set.add_rules(
 		landlock::path_beneath_rules(
 			defined_rules.ro,
 			LandlockFsAccess::DirectoryRO.rule(),
 		),
-	);
-	let rule_set = match result {
-		Ok(val)	=> val,
-		Err(e)	=> {
-			return Err(LandlockError::AddRulesError(e));
-		}
-	};
+	)
+		.map_err(LandlockError::AddRulesError)
+		?;
 
-	let result = rule_set.add_rules(
+	let rule_set = rule_set.add_rules(
 		landlock::path_beneath_rules(
 			defined_rules.rw,
 			LandlockFsAccess::Directory.rule(),
 		),
-	);
-	let rule_set = match result {
-		Ok(val)	=> val,
-		Err(e)	=> {
-			return Err(LandlockError::AddRulesError(e));
-		}
-	};
+	)
+		.map_err(LandlockError::AddRulesError)
+		?;
 
-	let result = rule_set.add_rules(
+	let rule_set = rule_set.add_rules(
 		landlock::path_beneath_rules(
 			defined_rules.full,
 			LandlockFsAccess::Full.rule(),
 		),
-	);
-	let rule_set = match result {
-		Ok(val)	=> val,
-		Err(e)	=> {
-			return Err(LandlockError::AddRulesError(e));
-		}
-	};
+	)
+		.map_err(LandlockError::AddRulesError)
+		?;
 
-	let result = rule_set.add_rules(
+	let rule_set = rule_set.add_rules(
 		landlock::path_beneath_rules(
 			defined_rules.read_dir,
 			landlock::make_bitflags!(AccessFs::ReadDir),
 		),
-	);
-	match result {
-		Ok(val)	=> Ok(val),
-		Err(e)	=> {
-			return Err(LandlockError::AddRulesError(e));
-		}
-	}
+	)
+		.map_err(LandlockError::AddRulesError)
+		?;
+
+	use landlock::RestrictSelfAttr;
+
+	rule_set
+		.all_threads(true)
+		.map_err(LandlockError::AddRulesError)
 }
 
-pub fn load_landlock (rule: landlock::RulesetCreated) -> Result<(), LandlockError> {
+pub async fn load_landlock (rule: landlock::RulesetCreated) -> Result<(), LandlockError> {
 	let rule_set = rule;
 
 	let _scope = landlock::Scope::from(landlock::Scope::Signal);
