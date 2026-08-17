@@ -10,11 +10,6 @@ struct Init {
 	conf:		std::sync::Arc<crate::envs::ConfigOpts>,
 }
 
-#[derive(Debug, zbus::DBusError)]
-enum AuxStartError {
-	ReplaceError(String),
-}
-
 #[zbus::interface(
 	name = "top.kimiblock.Portable.Init",
 	introspection_docs = true,
@@ -37,7 +32,7 @@ impl Init {
 		extra_files:	std::collections::HashMap<String, String>,
 		envs:		std::collections::HashMap<String, String>,
 		pty:		zbus::zvariant::OwnedFd,
-	) -> Result<(), AuxStartError> {
+	) -> zbus::fdo::Result<()> {
 		#[cfg(debug_assertions)]
 		{
 			let mut log_msg = String::from("Got start request from D-Bus: ");
@@ -58,7 +53,7 @@ impl Init {
 			match self.replacer.add(extra_files).await {
 				Ok(_)	=> {}
 				Err(e)	=> {
-					return Err(AuxStartError::ReplaceError(format!("{e:#?}")))
+					return Err(zbus::fdo::Error::Failed(format!("{e:#?}")))
 				}
 			};
 		};
@@ -79,17 +74,27 @@ impl Init {
 			};
 		}
 
-		for val in arguments {
-			args.push(val.into());
-		};
+		args.extend(arguments);
 
 		self.spawner.spawn(
 			crate::spawn::SpawnMessage::Start {
 				target: target,
 				args: args,
 				stream: crate::spawn::StreamConsole::WithPty {
-					fd: pty.into(),
+					fd:	{
+						match std::os::fd::OwnedFd::try_from(pty) {
+							Ok(v)	=> {v}
+							Err(e)	=> {
+								return Err(
+									zbus::fdo::Error::Failed(
+										format!("{e:#?}"),
+									),
+								);
+							}
+						}
+					},
 				},
+				// stream: crate::spawn::StreamConsole::Direct,
 				envs: {
 					if envs.len() > 0 {
 						Some(envs)
@@ -99,6 +104,10 @@ impl Init {
 				},
 			}
 		).await;
+
+		#[cfg(debug_assertions)]
+		crate::logger::log_debug(format!("Sent spawn instructions"));
+
 		Ok(())
 	}
 
@@ -116,9 +125,7 @@ impl Init {
 		_envs: std::collections::HashMap<String, String>,
 	) -> zbus::fdo::Result<zbus::zvariant::OwnedFd> {
 		Err(
-			zbus::fdo::Error::NotSupported(
-				"The AuxStart2 endpoint is deprecated and removed".into()
-			)
+			zbus::fdo::Error::NotSupported("The AuxStart2 interface is deprecated".into())
 		)
 	}
 

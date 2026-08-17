@@ -154,6 +154,7 @@ async fn run(
 							None	=> {command}
 						}
 					};
+
 					let command = command.args(args_new.iter());
 
 					{
@@ -179,32 +180,51 @@ async fn run(
 							command
 						}
 						StreamConsole::WithPty { fd }	=> {
-							let stdin = match fd.try_clone() {
-								Ok(v)	=> v,
-								Err(e)	=> {
-									crate::logger::log_warn(
-										format!(
-										"Could not clone pty: {e:#?}")
+							nix::ioctl_none_bad!(
+								tiocsctty,
+								nix::libc::TIOCSCTTY
+							);
+							use std::os::fd::IntoRawFd;
+							let fd_raw = fd.into_raw_fd();
+							unsafe {
+								command.pre_exec(move || {
+									nix::unistd::setsid()
+									.expect("Could not setsid");
+
+									tiocsctty(fd_raw)
+									.expect("Could not set controlling terminal");
+									nix::libc::dup2(
+										fd_raw,
+										nix::libc::STDIN_FILENO,
 									);
-									return;
-								}
-							};
-							command.stdin(stdin);
-
-							let stdout = match fd.try_clone() {
-								Ok(v)	=> v,
-								Err(e)	=> {
-									crate::logger::log_warn(
-										format!(
-										"Could not clone pty: {e:#?}")
+									nix::libc::dup2(
+										fd_raw,
+										nix::libc::STDOUT_FILENO,
 									);
-									return;
-								}
+									nix::libc::dup2(
+										fd_raw,
+										nix::libc::STDERR_FILENO,
+									);
+
+									let pgid = nix::unistd::getpid();
+									let res = nix::unistd::setpgid(
+										pgid.clone(),
+										pgid,
+									);
+									match res {
+										Ok(_)	=> {}
+										Err(e)	=> {
+											eprintln!(
+												"Could not set process group: {e:#?}"
+											)
+										}
+									}
+
+									println!("Begin terminal Stream...");
+
+									Ok(())
+								});
 							};
-							command.stdout(stdout);
-
-							command.stderr(fd);
-
 							command
 						}
 					};
