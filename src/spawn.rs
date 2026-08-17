@@ -175,17 +175,17 @@ async fn run(
 						}
 					};
 
-					let command = match stream {
+					let (command, _fd) = match stream {
 						StreamConsole::Direct		=> {
-							command
+							(command, None)
 						}
 						StreamConsole::WithPty { fd }	=> {
 							nix::ioctl_none_bad!(
 								tiocsctty,
 								nix::libc::TIOCSCTTY
 							);
-							use std::os::fd::IntoRawFd;
-							let fd_raw = fd.into_raw_fd();
+							use std::os::fd::AsRawFd;
+							let fd_raw = fd.as_raw_fd();
 							unsafe {
 								command.pre_exec(move || {
 									nix::unistd::setsid()
@@ -206,27 +206,13 @@ async fn run(
 										nix::libc::STDERR_FILENO,
 									);
 
-									let pgid = nix::unistd::getpid();
-									let res = nix::unistd::setpgid(
-										pgid.clone(),
-										pgid,
-									);
-									match res {
-										Ok(_)	=> {}
-										Err(e)	=> {
-											eprintln!(
-												"Could not set process group: {e:#?}"
-											)
-										}
-									};
-
 									#[cfg(debug_assertions)]
-									println!("Begin terminal Stream...");
+									println!("Begin terminal stream...");
 
 									Ok(())
 								});
 							};
-							command
+							(command, Some(fd))
 						}
 					};
 
