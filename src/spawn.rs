@@ -189,10 +189,10 @@ async fn run(
 							unsafe {
 								command.pre_exec(move || {
 									nix::unistd::setsid()
-									.expect("Could not setsid");
+									?;
 
 									tiocsctty(fd_raw)
-									.expect("Could not set controlling terminal");
+									?;
 									nix::libc::dup2(
 										fd_raw,
 										nix::libc::STDIN_FILENO,
@@ -218,8 +218,9 @@ async fn run(
 												"Could not set process group: {e:#?}"
 											)
 										}
-									}
+									};
 
+									#[cfg(debug_assertions)]
 									println!("Begin terminal Stream...");
 
 									Ok(())
