@@ -7,7 +7,7 @@ edition = "2024"
 ashpd = { version = "0.13.12", features = ["file_chooser", "inhibit"] }
 landlock = "0.4.5"
 libseccomp = "0.4.0"
-nix = { version = "0.31.3", features = ["term", "signal", "process"] }
+nix = { version = "0.31.3", features = ["term", "signal", "process", "ioctl", "fs"] }
 systemd = "0.10.1"
 thiserror = "2.0.18"
 tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread", "sync", "signal"]}
