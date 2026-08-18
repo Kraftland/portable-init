@@ -19,6 +19,83 @@ impl Init {
 	}
 
 	#[zbus(
+		name		= "AuxStart3Silent",
+	)]
+	async fn start_without_pty(
+		&self,
+		custom_target:	bool,
+		target_exec:	String,
+		args_append:	bool,
+		arguments:	Vec<String>,
+		extra_files:	std::collections::HashMap<String, String>,
+		envs:		std::collections::HashMap<String, String>,
+	) -> zbus::fdo::Result<()> {
+		#[cfg(debug_assertions)]
+		{
+			let mut log_msg = String::from("Got start request from D-Bus: ");
+			log_msg.push_str(format!("Custom target: {custom_target}; ").as_str());
+			log_msg.push_str(format!("target: {target_exec}; ").as_str());
+			log_msg.push_str(format!("append arguments: {args_append}; ").as_str());
+			log_msg.push_str(format!("arguments: {arguments:?}; ").as_str());
+			log_msg.push_str(format!("extra files: {extra_files:?}; ").as_str());
+			log_msg.push_str(format!("variables: {envs:?}; ").as_str());
+			crate::logger::log_debug(log_msg);
+		};
+
+
+
+		let mut args: Vec<String> = vec![];
+
+		if extra_files.len() > 0 {
+			match self.replacer.add(extra_files).await {
+				Ok(_)	=> {}
+				Err(e)	=> {
+					return Err(zbus::fdo::Error::Failed(format!("{e:#?}")))
+				}
+			};
+		};
+
+
+		let target: String = {
+			if custom_target {
+				target_exec.into()
+			} else {
+				self.conf.target.clone()
+			}
+		};
+
+
+		if args_append {
+			for val in self.conf.args.iter() {
+				args.push(val.clone());
+			};
+		}
+
+		args.extend(arguments);
+
+		self.spawner.spawn(
+			crate::spawn::SpawnMessage::Start {
+				target: target,
+				args: args,
+				stream: crate::spawn::StreamConsole::Direct,
+				// stream: crate::spawn::StreamConsole::Direct,
+				envs: {
+					if envs.len() > 0 {
+						Some(envs)
+					} else {
+						None
+					}
+				},
+			}
+		).await;
+
+		#[cfg(debug_assertions)]
+		crate::logger::log_debug(format!("Sent spawn instructions"));
+
+		Ok(())
+	}
+
+	#[zbus(
 		name		= "AuxStart3",
 	)]
 	async fn start_with_pty(
