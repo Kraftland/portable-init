@@ -224,8 +224,17 @@ async fn main() -> std::process::ExitCode {
 		spawn::SpawnMessage::Start {
 			target: config_opts.target.to_string(),
 			args: config_opts.args.clone(),
-			stream: spawn::StreamConsole::WithPty {
-				fd:	config_opts.pty_fd.try_clone().unwrap(),
+			stream: {
+				match &config_opts.pty_fd {
+					Some(v)	=> {
+						spawn::StreamConsole::WithPty {
+							fd:	v.try_clone().unwrap(),
+						}
+					}
+					None	=> {
+						spawn::StreamConsole::Direct
+					}
+				}
 			},
 			envs: None,
 		}
