@@ -432,7 +432,7 @@ dependencies = [
 
 [[package]]
 name = "init"
-version = "19.9.9"
+version = "20.0.0"
 dependencies = [
  "ashpd",
  "landlock",
