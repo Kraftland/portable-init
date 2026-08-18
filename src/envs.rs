@@ -36,7 +36,7 @@ pub struct ConfigOpts {
 	pub uclamp_min:		u32,
 	pub uclamp_max:		u32,
 
-	pub pty_fd:		std::os::fd::OwnedFd,
+	pub pty_fd:		Option<std::os::fd::OwnedFd>,
 }
 
 /**

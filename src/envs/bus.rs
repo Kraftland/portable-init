@@ -17,6 +17,7 @@ trait Info {
 		Vec<String>,
 		u32,
 		u32,
+		bool,
 	)>;
 
 	#[zbus(
@@ -79,8 +80,10 @@ pub struct InitInfo {
 
 	/**
 		the file descriptor for initial pty streaming
+
+		Could be none
 	*/
-	pub pty_fd:		std::os::fd::OwnedFd,
+	pub pty_fd:		Option<std::os::fd::OwnedFd>,
 }
 
 /**
@@ -107,11 +110,23 @@ pub async fn get(bus: &zbus::Connection, daemon_name: &str) -> Result<InitInfo, 
 
 	use std::os::fd::OwnedFd;
 
-	let pty = proxy
-		.stream()
-		.await
-		.map_err(super::EnvsError::BusError)
-		?;
+	let pty = {
+		if info.9 {
+			Some(
+				OwnedFd::try_from(
+					proxy
+					.stream()
+					.await
+					.map_err(super::EnvsError::BusError)
+					?
+				)
+					.map_err(super::EnvsError::FDConvertError)
+					?
+			)
+		} else {
+			None
+		}
+	};
 
 	let ret = InitInfo {
 		extra_files:		info.0,
@@ -123,9 +138,7 @@ pub async fn get(bus: &zbus::Connection, daemon_name: &str) -> Result<InitInfo, 
 		target_args:		info.6,
 		uclamp_min:		info.7,
 		uclamp_max:		info.8,
-		pty_fd:			OwnedFd::try_from(pty)
-						.map_err(super::EnvsError::FDConvertError)
-						?,
+		pty_fd:			pty,
 	};
 
 	Ok(ret)
