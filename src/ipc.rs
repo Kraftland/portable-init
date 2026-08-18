@@ -1,7 +1,5 @@
 use thiserror::Error;
 
-const INIT_APIVER: u32 = 18;
-
 mod tray;
 
 struct Init {
@@ -289,8 +287,8 @@ impl Init {
 	#[zbus(
 		property
 	)]
-	async fn version (&self) -> u32 {
-		INIT_APIVER
+	async fn version (&self) -> String {
+		env!("CARGO_PKG_VERSION_MAJOR").to_string()
 	}
 }
 
