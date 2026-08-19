@@ -10,7 +10,7 @@ pub enum SandboxStatus {
 	Stopping,
 }
 
-mod systemd;
+pub mod systemd;
 
 /**
 	The public trait Init is used to initialise status subsystems.
