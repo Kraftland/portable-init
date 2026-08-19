@@ -88,14 +88,19 @@ async fn main() -> std::process::ExitCode {
 			.expect("Could not load landlock rules");
 	});
 
-	let cancel_token_clone = cancel_token.clone();
-	let counter_spawn = tokio::spawn(
-		async move {
-			return counter::Counter::new(
-				cancel_token_clone,
-			).await;
-		},
-	);
+	let counter_spawn = {
+		let cancel_token_clone = cancel_token.clone();
+		let bus_clone = config_opts.bus_conn.clone();
+
+		tokio::spawn(
+			async move {
+				counter::Counter::new(
+					cancel_token_clone,
+					bus_clone,
+				).await
+			},
+		)
+	};
 
 	let replacer = match replacer_spawn.await {
 		Ok(v)	=> v,

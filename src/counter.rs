@@ -1,7 +1,9 @@
 // use thiserror::Error;
 
+mod status;
+
 pub struct Counter {
-	pub send_channel: tokio::sync::mpsc::Sender<CounterMessage>,
+	pub	send_channel: tokio::sync::mpsc::Sender<CounterMessage>,
 }
 
 pub enum CounterMessage {
@@ -11,29 +13,45 @@ pub enum CounterMessage {
 
 impl Counter {
 	pub async fn new (
-			cancel_token: tokio_util::sync::CancellationToken,
+			cancel_token:	tokio_util::sync::CancellationToken,
+			bus:		zbus::Connection,
 	) -> Self {
 		let (tx, rx) = tokio::sync::mpsc::channel::<CounterMessage>(16);
 
-		tokio::spawn(start(rx, cancel_token));
+		tokio::spawn(start(rx, cancel_token, bus));
 
 		Self { send_channel: tx }
 	}
 }
 
 	async fn start (
-			mut receive_chan: tokio::sync::mpsc::Receiver<CounterMessage>,
-			cancel_token: tokio_util::sync::CancellationToken,
+			mut receive_chan:	tokio::sync::mpsc::Receiver<CounterMessage>,
+			cancel_token:		tokio_util::sync::CancellationToken,
+			bus:			zbus::Connection,
 		) {
-		let startup_result = systemd::daemon::notify(false, vec![("READY", "1")].iter());
-		match startup_result {
-			Ok(_)	=> {}
-			Err(e)	=> {
-				cancel_token.cancel();
-				panic!("Could not set unit status: {e:#?}");
-			}
+
+		let (systemd_notify, portal_notify) = {
+			use status::Init;
+
+			let sd = status::systemd::SystemdStatus {};
+
+			match sd.initialise().await {
+				Ok(v)	=> {v}
+				Err(e)	=> {
+					crate::logger::log_warn(
+						format!("Could not initialise systemd status: {e:#?}")
+					);
+				}
+			};
+
+			let portal = status::portal::PortalStatus {
+				bus:	bus,
+			};
+
+			(std::sync::Arc::new(sd), std::sync::Arc::new(portal))
 		};
-		let mut count: u128 = 0;
+
+		let mut count: usize = 0;
 		loop {
 			let msg = tokio::select! {
 				val = receive_chan.recv() => {val}
@@ -51,28 +69,65 @@ impl Counter {
 					count -= 1;
 				}
 			}
-			if count == 0 {
-				cancel_token.cancel();
 
-				let _ = systemd::daemon::notify(
-					false,
-					vec![(systemd::daemon::STATE_STOPPING, "1")].iter(),
-				);
-				return
-			}
-			let result = systemd::daemon::notify(
-				false,
-				vec![
-					(
-						systemd::daemon::STATE_STATUS,
-						format!("Tracked PID count: {count}").as_str(),
-					)
-				].iter(),
-			);
-			match result {
-				Ok(_)	=> {}
-				Err(e)	=> {
-					panic!("Could not set unit status: {e:#?}");
+			match count {
+				0	=> {
+					use status::UpdateStatus;
+
+					let stat = status::SandboxStatus::Stopping;
+
+					match systemd_notify.update(&stat).await {
+						Ok(_)	=> {}
+						Err(e)	=> {
+							crate::logger::log_warn(
+								format!(
+								"Could not update systemd status: {e:#?}",
+								)
+							);
+						}
+					};
+
+					match portal_notify.update(&stat).await {
+						Ok(_)	=> {}
+						Err(e)	=> {
+							crate::logger::log_warn(
+								format!(
+								"Could not update Background status: {e:#?}",
+								)
+							);
+						}
+					};
+
+					cancel_token.cancel();
+
+					return;
+				}
+				v	=> {
+					use status::UpdateStatus;
+
+					let stat = status::SandboxStatus::Ready { tracked_pid: v };
+
+					match systemd_notify.update(&stat).await {
+						Ok(_)	=> {}
+						Err(e)	=> {
+							crate::logger::log_warn(
+								format!(
+								"Could not update systemd status: {e:#?}",
+								)
+							);
+						}
+					};
+
+					match portal_notify.update(&stat).await {
+						Ok(_)	=> {}
+						Err(e)	=> {
+							crate::logger::log_warn(
+								format!(
+								"Could not update Background status: {e:#?}",
+								)
+							);
+						}
+					};
 				}
 			};
 		}
