@@ -97,9 +97,9 @@ async fn main() -> std::process::ExitCode {
 				counter::Counter::new(
 					cancel_token_clone,
 					bus_clone,
-				).await;
+				).await
 			},
-		);
+		)
 	};
 
 	let replacer = match replacer_spawn.await {
