@@ -16,21 +16,21 @@ impl super::UpdateStatus for PortalStatus {
 		let content = status.to_string();
 
 		let options = {
-			let mut arr: Vec<(String, zbus::zvariant::OwnedValue)> = vec![];
+			use std::collections::HashMap;
+			use zbus::zvariant::OwnedValue;
 
-			arr.push(
-				(
-					"message".to_string(),
-					zbus::zvariant::OwnedValue::try_from(
-						zbus::zvariant::Value::Str(content.into())
-					)
-						.map_err(PortalError::VariantError)
-						?
+			let mut map = HashMap::new();
+
+			map.insert(
+				"message".to_string(),
+				OwnedValue::try_from(
+					zbus::zvariant::Value::Str(content.into())
 				)
+					.map_err(PortalError::VariantError)
+					?,
 			);
 
-
-			arr
+			map
 		};
 
 		proxy
@@ -60,5 +60,5 @@ pub enum PortalError {
 	default_path	= "/org/freedesktop/portal/desktop",
 )]
 trait Portal {
-	async fn set_status(&self, opt: Vec<(String, zbus::zvariant::OwnedValue)>) -> zbus::Result<()>;
+	async fn set_status(&self, opt: std::collections::HashMap<String, zbus::zvariant::OwnedValue>) -> zbus::Result<()>;
 }
