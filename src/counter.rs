@@ -1,7 +1,9 @@
 // use thiserror::Error;
 
+mod status;
+
 pub struct Counter {
-	pub send_channel: tokio::sync::mpsc::Sender<CounterMessage>,
+	pub	send_channel: tokio::sync::mpsc::Sender<CounterMessage>,
 }
 
 pub enum CounterMessage {
@@ -11,19 +13,21 @@ pub enum CounterMessage {
 
 impl Counter {
 	pub async fn new (
-			cancel_token: tokio_util::sync::CancellationToken,
+			cancel_token:	tokio_util::sync::CancellationToken,
+			bus:		zbus::Connection,
 	) -> Self {
 		let (tx, rx) = tokio::sync::mpsc::channel::<CounterMessage>(16);
 
-		tokio::spawn(start(rx, cancel_token));
+		tokio::spawn(start(rx, cancel_token, bus));
 
 		Self { send_channel: tx }
 	}
 }
 
 	async fn start (
-			mut receive_chan: tokio::sync::mpsc::Receiver<CounterMessage>,
-			cancel_token: tokio_util::sync::CancellationToken,
+			mut receive_chan:	tokio::sync::mpsc::Receiver<CounterMessage>,
+			cancel_token:		tokio_util::sync::CancellationToken,
+			bus:			zbus::Connection,
 		) {
 		let startup_result = systemd::daemon::notify(false, vec![("READY", "1")].iter());
 		match startup_result {
