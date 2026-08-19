@@ -39,6 +39,7 @@ impl std::fmt::Display for SandboxStatus {
 }
 
 pub mod systemd;
+pub mod portal;
 
 /**
 	The public trait Init is used to initialise status subsystems.
