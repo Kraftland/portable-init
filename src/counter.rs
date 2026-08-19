@@ -30,7 +30,7 @@ impl Counter {
 			bus:			zbus::Connection,
 		) {
 
-		let (systemd_notify) = {
+		let (systemd_notify, portal_notify) = {
 			use status::Init;
 
 			let sd = status::systemd::SystemdStatus {};
@@ -44,7 +44,11 @@ impl Counter {
 				}
 			};
 
-			(std::sync::Arc::new(sd))
+			let portal = status::portal::PortalStatus {
+				bus:	bus,
+			};
+
+			(std::sync::Arc::new(sd), std::sync::Arc::new(portal))
 		};
 
 		let mut count: usize = 0;
@@ -83,6 +87,17 @@ impl Counter {
 						}
 					};
 
+					match portal_notify.update(&stat).await {
+						Ok(_)	=> {}
+						Err(e)	=> {
+							crate::logger::log_warn(
+								format!(
+								"Could not update Background status: {e:#?}",
+								)
+							);
+						}
+					};
+
 					cancel_token.cancel();
 
 					return;
@@ -98,6 +113,17 @@ impl Counter {
 							crate::logger::log_warn(
 								format!(
 								"Could not update systemd status: {e:#?}",
+								)
+							);
+						}
+					};
+
+					match portal_notify.update(&stat).await {
+						Ok(_)	=> {}
+						Err(e)	=> {
+							crate::logger::log_warn(
+								format!(
+								"Could not update Background status: {e:#?}",
 								)
 							);
 						}
