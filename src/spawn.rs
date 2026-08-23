@@ -137,6 +137,7 @@ async fn run(
 
 					let (command, _fd) = match stream {
 						StreamConsole::Direct		=> {
+							command.env_remove("TERM");
 							(command, None)
 						}
 						StreamConsole::WithPty { fd }	=> {
