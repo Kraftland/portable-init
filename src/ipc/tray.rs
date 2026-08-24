@@ -17,6 +17,30 @@ pub async fn wake() -> zbus::fdo::Result<()> {
 
 	let names = dbus_proxy.list_names().await?;
 
+	{
+		let name = match zbus::names::BusName::try_from("org.kde.StatusNotifierWatcher") {
+			Ok(v)	=> v,
+			Err(e)	=> {
+				return Err(
+					zbus::fdo::Error::Failed(
+						format!("Could not convert bus name: {e:#?}"),
+					)
+				);
+			}
+		};
+
+		match dbus_proxy.name_has_owner(name).await? {
+			true	=> {}
+			false	=> {
+				return Err(
+					zbus::fdo::Error::NameHasNoOwner(
+						"StatusNotifierWatcher has no owner".to_string(),
+					)
+				);
+			}
+		}
+	};
+
 	for name in names {
 		match wake_name(&conn, &name).await {
 			Ok(_)	=> {
