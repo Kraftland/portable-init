@@ -18,18 +18,6 @@ async fn main() -> std::process::ExitCode {
 	let cancel_token_clone = cancel_token.clone();
 	let replacer_spawn = tokio::spawn(process_env::Replacer::new(cancel_token_clone));
 
-	let seccomp_result = tokio::task::spawn_blocking(move || {
-		match seccomp::compile_syscall_list() {
-			Ok(v)	=> v,
-			Err(e)	=> {
-				logger::log_fatal(
-					format!("Could not compile seccomp list: {e:#?}"),
-				);
-				panic!("Could not compile seccomp list: {e:#?}");
-			}
-		}
-	});
-
 	let config_opts = {
 		match envs::get().await {
 			Ok(v)	=> v,
@@ -46,6 +34,12 @@ async fn main() -> std::process::ExitCode {
 	logger::log_debug(
 		format!("Got configurations: {config_opts:#?}"),
 	);
+
+	let seccomp_spawn = {
+		let conf_clone = config_opts.clone();
+		let token_clone = cancel_token.clone();
+		tokio::spawn(seccomp::load(conf_clone, token_clone))
+	};
 
 
 	let conf_clone = config_opts.clone();
@@ -143,35 +137,10 @@ async fn main() -> std::process::ExitCode {
 	};
 
 	{
-		let list = match seccomp_result.await {
-			Ok(v)	=> {v}
-			Err(e)	=> {
-				logger::log_fatal(format!("Could not compile seccomp list: {e:#?}"));
-				panic!("{e:#?}");
-			}
-		};
-
-		let filter = match seccomp::compile_filter(
-			config_opts.clone(),
-			&list,
-		).await {
-			Ok(v)	=> v,
-			Err(e)	=> {
-				logger::log_fatal(format!("Could not compile seccomp filter: {e:#?}"));
-				panic!("{e:#?}");
-			}
-		};
-		let fd = match seccomp::load_seccomp_filter(filter) {
-			Ok(v)	=> v,
-			Err(e)	=> {
-				logger::log_fatal(format!("Could load seccomp filter: {e:#?}"));
-				panic!("{e:#?}");
-			}
-		};
-		let cancel_token = cancel_token.clone();
-		std::thread::spawn(move || {
-			seccomp::process_seccomp_unotify(fd, cancel_token)
-		})
+		seccomp_spawn
+			.await
+			.expect("Could not spawn seccomp thread")
+			.expect("Could not load seccomp filter")
 	};
 
 	landlock_result
