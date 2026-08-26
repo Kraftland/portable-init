@@ -1,7 +1,5 @@
 use thiserror::Error;
 
-mod tray;
-
 struct Init {
 	replacer:	crate::process_env::Replacer,
 	spawner:	crate::spawn::Spawner,
@@ -13,11 +11,6 @@ struct Init {
 	introspection_docs = true,
 )]
 impl Init {
-	#[zbus(name = "ActivateTray")]
-	async fn activate_tray(&self) -> zbus::fdo::Result<()> {
-		tray::wake().await
-	}
-
 	#[zbus(
 		name		= "AuxStart3Silent",
 	)]
