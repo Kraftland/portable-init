@@ -373,6 +373,7 @@ pub fn compile_syscall_list(
 		],
 		process: vec![
 			"capget".into(),
+			"capset".into(),
 			"clone".into(),
 			"clone3".into(),
 			"fork".into(),

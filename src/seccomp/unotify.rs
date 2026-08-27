@@ -8,18 +8,22 @@ pub fn process_seccomp_unotify (
 	fd: libseccomp::ScmpFd,
 	cancel_token: tokio_util::sync::CancellationToken,
 ) {
+	// (syscall name (str), return value, error value)
+	let mut override_map = std::collections::HashMap::new();
+	{
+		override_map.insert("capset", (0, 0));
+		override_map.insert("unshare", (0, 0));
+		override_map.insert("clone", (0, 0));
+		override_map.insert("clone3", (0, 0));
+		override_map.insert("chroot", (0, 0));
+		override_map.insert("setfsuid", (0, 0));
+	};
 
 	let errno_raw = - {
 		use nix::errno::Errno;
 		let err = Errno::ENOSYS;
 		err as i32
 	};
-
-	let fake_allow: Vec<String> = vec![
-		"chroot".into(),
-		"capset".into(),
-		"setfsuid".into(),
-	];
 
 	loop {
 		let request = libseccomp::ScmpNotifReq::receive(fd);
@@ -63,18 +67,27 @@ pub fn process_seccomp_unotify (
 		);
 
 		let response = {
-			if fake_allow.contains(&syscall_name) {
-				libseccomp::ScmpNotifResp::new_val(
-					request.id,
-					0,
-					libseccomp::ScmpNotifRespFlags::empty(),
-				)
-			} else {
-				libseccomp::ScmpNotifResp::new_error(
-					request.id,
-					errno_raw,
-					libseccomp::ScmpNotifRespFlags::empty(),
-				)
+			match override_map.get(&syscall_name.as_str()) {
+				Some(v)	=> {
+					#[cfg(debug_assertions)]
+					crate::logger::log_debug(
+						format!("Overriding return value for {syscall_name}: ")
+					);
+
+					libseccomp::ScmpNotifResp::new(
+						request.id,
+						v.0,
+						v.1,
+						libseccomp::ScmpNotifRespFlags::empty().bits(),
+					)
+				}
+				None	=> {
+					libseccomp::ScmpNotifResp::new_error(
+						request.id,
+						errno_raw,
+						libseccomp::ScmpNotifRespFlags::empty(),
+					)
+				}
 			}
 		};
 
