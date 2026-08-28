@@ -7,7 +7,7 @@ pub async fn compile_filter (
 ) -> Result<libseccomp::ScmpFilterContext, super::SeccompError> {
 	use super::SeccompError;
 
-	let mut filter_result = match config_env.lockdown {
+	let mut filter_result = match config_env.seccomp_whitelist {
 		true	=>	{
 			let filter = libseccomp::ScmpFilterContext::new(
 				libseccomp::ScmpAction::Notify,
