@@ -20,7 +20,8 @@ pub enum EnvsError {
 
 #[derive(Debug)]
 pub struct ConfigOpts {
-	pub lockdown:		bool,
+	pub landlock:		bool,
+	pub seccomp_whitelist:	bool,
 	pub has_flatpak_info:	bool,
 	pub debugging:		bool,
 	pub sandbox_id:		String,
