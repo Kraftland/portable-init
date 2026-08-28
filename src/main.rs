@@ -64,7 +64,7 @@ async fn main() -> std::process::ExitCode {
 
 	let conf_clone = config_opts.clone();
 	let landlock_result = tokio::spawn(async move {
-		if ! conf_clone.lockdown {
+		if ! conf_clone.landlock {
 			return;
 		}
 		let rules = match landlock::compile_landlock_rules(&conf_clone).await {
