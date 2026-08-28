@@ -20,7 +20,8 @@ pub enum EnvsError {
 
 #[derive(Debug)]
 pub struct ConfigOpts {
-	pub lockdown:		bool,
+	pub landlock:		bool,
+	pub seccomp_whitelist:	bool,
 	pub has_flatpak_info:	bool,
 	pub debugging:		bool,
 	pub sandbox_id:		String,
@@ -60,7 +61,8 @@ pub async fn get() -> Result<std::sync::Arc<ConfigOpts>, EnvsError> {
 	Ok(
 		std::sync::Arc::new(
 			ConfigOpts {
-				lockdown:		init_config.lockdown,
+				landlock:		init_config.landlock,
+				seccomp_whitelist:	init_config.seccomp_whitelist,
 				has_flatpak_info:	init_config.flatpak_info,
 				debugging:		init_config.allow_debug,
 				sandbox_id:		appid,

@@ -7,7 +7,7 @@ pub async fn compile_filter (
 ) -> Result<libseccomp::ScmpFilterContext, super::SeccompError> {
 	use super::SeccompError;
 
-	let mut filter_result = match config_env.lockdown {
+	let mut filter_result = match config_env.seccomp_whitelist {
 		true	=>	{
 			let filter = libseccomp::ScmpFilterContext::new(
 				libseccomp::ScmpAction::Notify,
@@ -67,7 +67,7 @@ pub async fn compile_filter (
 
 
 
-	match config_env.lockdown {
+	match config_env.seccomp_whitelist {
 		true => {
 			//println!("Appending allow list: {:?}", &syscall_list.allow_list);
 			for val in syscall_list.allow_list.iter() {
@@ -100,8 +100,8 @@ pub async fn compile_filter (
 	}
 
 	match config_env.debugging {
-		true => {
-			if config_env.lockdown {
+		true	=> {
+			if config_env.seccomp_whitelist {
 				for val in syscall_list.debug_list.iter() {
 					let result = filter_result.add_rule(
 						libseccomp::ScmpAction::Allow,
@@ -114,11 +114,11 @@ pub async fn compile_filter (
 						},
 					}
 				}
+			} else {
 			}
-
 		}
-		false => {
-			if ! config_env.lockdown {
+		false	=> {
+			if ! config_env.seccomp_whitelist {
 				for val in syscall_list.debug_list.iter() {
 					let result = filter_result.add_rule(
 						libseccomp::ScmpAction::Notify,
@@ -134,6 +134,7 @@ pub async fn compile_filter (
 			}
 		}
 	};
+
 	Ok(filter_result)
 }
 

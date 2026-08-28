@@ -18,6 +18,7 @@ trait Info {
 		u32,
 		u32,
 		bool,
+		bool,
 	)>;
 
 	#[zbus(
@@ -40,11 +41,6 @@ pub struct InitInfo {
 	pub extra_files:	std::collections::HashMap<String, String>,
 	pub inhibit_suspend:	bool,
 	pub flatpak_info:	bool,
-
-	/**
-		Lockdown is an alias of seccomp whitelist + landlock
-	*/
-	pub lockdown:		bool,
 
 	/**
 		Whether or not to allow a set of debugging syscalls
@@ -84,6 +80,9 @@ pub struct InitInfo {
 		Could be none
 	*/
 	pub pty_fd:		Option<std::os::fd::OwnedFd>,
+
+	pub landlock:		bool,
+	pub seccomp_whitelist:	bool,
 }
 
 /**
@@ -132,13 +131,14 @@ pub async fn get(bus: &zbus::Connection, daemon_name: &str) -> Result<InitInfo, 
 		extra_files:		info.0,
 		inhibit_suspend:	info.1,
 		flatpak_info:		info.2,
-		lockdown:		info.3,
+		landlock:		info.3,
 		allow_debug:		info.4,
 		target_exec:		info.5,
 		target_args:		info.6,
 		uclamp_min:		info.7,
 		uclamp_max:		info.8,
 		pty_fd:			pty,
+		seccomp_whitelist:	info.10,
 	};
 
 	Ok(ret)
