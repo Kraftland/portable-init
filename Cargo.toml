@@ -3,6 +3,9 @@ name = "init"
 version = "20.0.0"
 edition = "2024"
 
+[profile.release]
+lto = true
+
 [dependencies]
 ashpd = { version = "0.13.12", features = ["file_chooser", "inhibit"] }
 landlock = "0.4.7"
