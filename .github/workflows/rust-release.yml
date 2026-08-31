@@ -1,4 +1,4 @@
-name: Debug Build
+name: Release Build
 
 on:
   push:
@@ -24,6 +24,6 @@ jobs:
       run: pacman -Syu --needed --noconfirm libseccomp rust systemd-libs systemd pkgconf
 
     - name: Build
-      run: cargo build --verbose
+      run: cargo build --release
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --release
