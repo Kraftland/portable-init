@@ -17,7 +17,6 @@ pub fn process_seccomp_unotify (
 
 	let fake_allow: Vec<String> = vec![
 		"chroot".into(),
-		"capset".into(),
 		"setfsuid".into(),
 	];
 

@@ -372,6 +372,7 @@ pub fn compile_syscall_list(
 			"syncfs".into(),
 		],
 		process: vec![
+			"capset".into(),
 			"capget".into(),
 			"clone".into(),
 			"clone3".into(),
