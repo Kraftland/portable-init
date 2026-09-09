@@ -96,6 +96,8 @@ pub fn compile_syscall_list(
 		fs_op: vec![
 			"access".into(),
 			"chdir".into(),
+			// mount namespace should be blocked by landlock
+			"chroot".into(),
 			"chmod".into(),
 			"close".into(),
 			"creat".into(),
