@@ -15,17 +15,15 @@ pub async fn inhibit_suspend(
 	};
 
 	let inhibit_options = ashpd::desktop::inhibit::InhibitOptions::default()
-		.set_reason(Some("Inhibit requested by Package configuration"),
+		.set_reason(Some("Inhibit requested by Portable configuration"),
 	);
 
-	let inhibit_result = Box::pin(
-		proxy.inhibit(
-			None,
-			ashpd::desktop::inhibit::InhibitFlags::Idle.into(),
-			inhibit_options,
-			//ashpd::desktop::inhibit::InhibitOptions::default(),
-		)
-	).await;
+	let inhibit_result = Box::pin(proxy.inhibit(
+		None,
+		ashpd::desktop::inhibit::InhibitFlags::Suspend.into(),
+		inhibit_options,
+		//ashpd::desktop::inhibit::InhibitOptions::default(),
+	)).await;
 
 	match inhibit_result {
 		Ok(v)	=> {
