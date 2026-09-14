@@ -13,7 +13,7 @@ impl super::Init for SystemdStatus {
 					false,
 					vec![
 						("READY", "1"),
-						("NOTIFYACCESS", "main"), // Reset NotifyAccess
+						//("NOTIFYACCESS", "main"), // Reset NotifyAccess
 						("MAINPID", &v.to_string()),
 					].iter(),
 				)
