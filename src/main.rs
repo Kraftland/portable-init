@@ -13,7 +13,6 @@ mod cleaner;
 #[tokio::main]
 async fn main() -> std::process::ExitCode {
 	let cancel_token = tokio_util::sync::CancellationToken::new();
-	let task_tracker = tokio_util::task::TaskTracker::new();
 
 	let cancel_token_clone = cancel_token.clone();
 	let replacer_spawn = tokio::spawn(process_env::Replacer::new(cancel_token_clone));
@@ -222,8 +221,6 @@ async fn main() -> std::process::ExitCode {
 		}
 	};
 
-	task_tracker.close();
-
 	if config_opts.inhibit {
 		let cancel_token_clone = cancel_token.clone();
 		tokio::spawn(crate::inhibit::inhibit_suspend(cancel_token_clone));
@@ -253,9 +250,14 @@ async fn main() -> std::process::ExitCode {
 		}
 	};
 
-	task_tracker.wait().await;
-
-	ipc_object.request_shutdown().await.unwrap();
+	match ipc_object.request_shutdown().await {
+		Ok(_)	=> {}
+		Err(e)	=> {
+			crate::logger::log_warn(
+				format!("Could not request IPC for shutdown: {e:#?}")
+			);
+		}
+	};
 	tokio::spawn(ipc_object.graceful_shutdown());
 
 	return std::process::ExitCode::SUCCESS
