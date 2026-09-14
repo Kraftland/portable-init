@@ -90,25 +90,6 @@ pub struct InitInfo {
 	pub seccomp_whitelist:	bool,
 }
 
-/**
-	Get the PID on host; This may be used for systemd MainPID registration
-
-	Errors should be handled gracefully.
-*/
-pub async fn get_pid(
-	bus:		zbus::Connection,
-	daemon_name:	std::sync::Arc<String>,
-) -> Result<u32, super::EnvsError> {
-	let proxy = InfoProxy::new(&bus, daemon_name.as_str())
-		.await
-		.map_err(super::EnvsError::BusError)
-		?;
-
-	proxy
-		.pid()
-		.await
-		.map_err(super::EnvsError::BusError)
-}
 
 /**
 	The public struct InitInfo describes information passed down to Init via bus IPC
