@@ -7,7 +7,7 @@ pub struct SystemdStatus {
 
 impl super::Init for SystemdStatus {
 	async fn initialise(&self) -> Result<(), Self::StatusError> {
-		match self.config.host_pid {
+		match self.config.pidfd_ino {
 			Some(v)	=> {
 				systemd::daemon::notify(
 					false,

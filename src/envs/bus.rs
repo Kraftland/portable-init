@@ -95,19 +95,34 @@ pub struct InitInfo {
 
 	Errors should be handled gracefully.
 */
-pub async fn get_pid(
-	bus:		zbus::Connection,
-	daemon_name:	std::sync::Arc<String>,
-) -> Result<u32, super::EnvsError> {
-	let proxy = InfoProxy::new(&bus, daemon_name.as_str())
-		.await
-		.map_err(super::EnvsError::BusError)
-		?;
+pub async fn get_pidfd_inode(
+) -> Result<u64, super::EnvsError> {
+	let raw_fd = unsafe {
+		libc::syscall(
+			libc::SYS_pidfd_open,
+			std::process::id(),
+			libc::PIDFD_NONBLOCK,
+		)
+	};
 
-	proxy
-		.pid()
-		.await
-		.map_err(super::EnvsError::BusError)
+	let fd = if raw_fd < 0 {
+		return Err(
+			super::EnvsError::PidFdError(raw_fd)
+		);
+	} else {
+		// use std::os::fd::AsFd;
+		unsafe {
+			std::os::fd::BorrowedFd::borrow_raw(raw_fd as i32)
+		}
+	};
+
+	Ok(
+		nix::sys::stat::fstat(fd)
+			.map_err(super::EnvsError::PidFdFStatError)
+			?
+			.st_ino
+	)
+
 }
 
 /**

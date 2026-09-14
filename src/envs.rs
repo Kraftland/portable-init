@@ -19,6 +19,12 @@ pub enum EnvsError {
 
 	#[error("Spawn error: {0:#?}")]
 	SpawnError(tokio::task::JoinError),
+
+	#[error("PIDFD error: {0:#?}")]
+	PidFdError(i64),
+
+	#[error("fstat on PIDFD error: {0:#?}")]
+	PidFdFStatError(nix::Error),
 }
 
 #[derive(Debug)]
@@ -43,9 +49,9 @@ pub struct ConfigOpts {
 	pub pty_fd:		Option<std::os::fd::OwnedFd>,
 
 	/**
-		The Init PID on host
+		The PIDFD inode number for Init
 	*/
-	pub host_pid:		Option<u32>,
+	pub pidfd_ino:		Option<u64>,
 }
 
 /**
@@ -63,10 +69,7 @@ pub async fn get() -> Result<std::sync::Arc<ConfigOpts>, EnvsError> {
 		?;
 
 	let pid = tokio::spawn(
-		bus::get_pid(
-			bus_connection.clone(),
-			daemon_name.clone(),
-		)
+		bus::get_pidfd_inode()
 	);
 
 	let init_config = bus::get(&bus_connection, daemon_name)
@@ -99,7 +102,7 @@ pub async fn get() -> Result<std::sync::Arc<ConfigOpts>, EnvsError> {
 				uclamp_min:		init_config.uclamp_min,
 				uclamp_max:		init_config.uclamp_max,
 				pty_fd:			init_config.pty_fd,
-				host_pid:		pid,
+				pidfd_ino:		pid,
 			}
 		)
 	)
