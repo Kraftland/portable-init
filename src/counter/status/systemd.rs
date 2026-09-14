@@ -1,4 +1,3 @@
-
 /**
 	The SystemdStatus represents an implementation of the systemd notify protocol
 */

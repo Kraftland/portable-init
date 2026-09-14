@@ -22,6 +22,11 @@ trait Info {
 	)>;
 
 	#[zbus(
+		name	= "GetPID",
+	)]
+	async fn pid(&self) -> zbus::Result<u32>;
+
+	#[zbus(
 		name	= "StreamPty",
 	)]
 	async fn stream(&self) -> zbus::Result<zbus::zvariant::OwnedFd>;
@@ -86,6 +91,26 @@ pub struct InitInfo {
 }
 
 /**
+	Get the PID on host; This may be used for systemd MainPID registration
+
+	Errors should be handled gracefully.
+*/
+pub async fn get_pid(
+	bus:		zbus::Connection,
+	daemon_name:	std::sync::Arc<String>,
+) -> Result<u32, super::EnvsError> {
+	let proxy = InfoProxy::new(&bus, daemon_name.as_str())
+		.await
+		.map_err(super::EnvsError::BusError)
+		?;
+
+	proxy
+		.pid()
+		.await
+		.map_err(super::EnvsError::BusError)
+}
+
+/**
 	The public struct InitInfo describes information passed down to Init via bus IPC
 
 	It is estimated that passing them directly instead of using memfd is faster at smaller
@@ -95,8 +120,11 @@ pub struct InitInfo {
 	will therefore contact the controller. Thus, we can manipulate the started atomic boolean
 	inside AuxStart struct to clearly indicate whether the Init system has started.
 */
-pub async fn get(bus: &zbus::Connection, daemon_name: &str) -> Result<InitInfo, super::EnvsError> {
-	let proxy = InfoProxy::new(bus, daemon_name)
+pub async fn get(
+	bus:		&zbus::Connection,
+	daemon_name:	std::sync::Arc<String>,
+) -> Result<InitInfo, super::EnvsError> {
+	let proxy = InfoProxy::new(&bus, daemon_name.as_str())
 		.await
 		.map_err(super::EnvsError::BusError)
 		?;
