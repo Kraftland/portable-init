@@ -30,6 +30,9 @@ impl super::Init for SystemdStatus {
 			vec.push(
 				libsystemd::daemon::NotifyState::Other(String::from("MAINPIDFD=1"))
 			);
+			vec.push(
+				libsystemd::daemon::NotifyState::Other(String::from("NOTIFYACCESS=main"))
+			);
 			vec
 		};
 
