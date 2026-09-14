@@ -85,13 +85,11 @@ async fn main() -> std::process::ExitCode {
 	let counter_spawn = {
 		let cancel_token_clone = cancel_token.clone();
 		let bus_clone = config_opts.bus_conn.clone();
-		let conf_clone = config_opts.clone();
 
 		tokio::spawn(
 			async move {
 				counter::Counter::new(
 					cancel_token_clone,
-					conf_clone,
 					bus_clone,
 				).await
 			},

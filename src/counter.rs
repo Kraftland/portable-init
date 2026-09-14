@@ -14,12 +14,11 @@ pub enum CounterMessage {
 impl Counter {
 	pub async fn new (
 			cancel_token:	tokio_util::sync::CancellationToken,
-			config:		std::sync::Arc<crate::envs::ConfigOpts>,
 			bus:		zbus::Connection,
 	) -> Self {
 		let (tx, rx) = tokio::sync::mpsc::channel::<CounterMessage>(16);
 
-		tokio::spawn(start(rx, cancel_token, config, bus));
+		tokio::spawn(start(rx, cancel_token, bus));
 
 		Self { send_channel: tx }
 	}
@@ -28,16 +27,13 @@ impl Counter {
 	async fn start (
 			mut receive_chan:	tokio::sync::mpsc::Receiver<CounterMessage>,
 			cancel_token:		tokio_util::sync::CancellationToken,
-			config:			std::sync::Arc<crate::envs::ConfigOpts>,
 			bus:			zbus::Connection,
 		) {
 
 		let (systemd_notify, portal_notify) = {
 			use status::Init;
 
-			let sd = status::systemd::SystemdStatus {
-				config:		config,
-			};
+			let sd = status::systemd::SystemdStatus {};
 
 			match sd.initialise().await {
 				Ok(v)	=> {v}
@@ -136,3 +132,4 @@ impl Counter {
 			};
 		}
 	}
+

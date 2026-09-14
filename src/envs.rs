@@ -16,15 +16,6 @@ pub enum EnvsError {
 
 	#[error("FD conversion error: {0:#?}")]
 	FDConvertError(std::convert::Infallible),
-
-	#[error("Spawn error: {0:#?}")]
-	SpawnError(tokio::task::JoinError),
-
-	#[error("PIDFD error: {0:#?}")]
-	PidFdError(i64),
-
-	#[error("fstat on PIDFD error: {0:#?}")]
-	PidFdFStatError(nix::Error),
 }
 
 #[derive(Debug)]
@@ -47,11 +38,6 @@ pub struct ConfigOpts {
 	pub uclamp_max:		u32,
 
 	pub pty_fd:		Option<std::os::fd::OwnedFd>,
-
-	/**
-		The PIDFD inode number for Init
-	*/
-	pub pidfd_ino:		Option<u64>,
 }
 
 /**
@@ -68,23 +54,10 @@ pub async fn get() -> Result<std::sync::Arc<ConfigOpts>, EnvsError> {
 		.map_err(EnvsError::ConnectBusError)
 		?;
 
-	let pid = tokio::spawn(
-		bus::get_pidfd_inode()
-	);
 
 	let init_config = bus::get(&bus_connection, daemon_name)
 		.await
 		?;
-
-	let pid = match pid.await.map_err(EnvsError::SpawnError)? {
-		Ok(v)	=> Some(v),
-		Err(e)	=> {
-			crate::logger::log_warn(
-				format!("Could not get host PID: {e:#?}")
-			);
-			None
-		}
-	};
 
 	Ok(
 		std::sync::Arc::new(
@@ -102,7 +75,6 @@ pub async fn get() -> Result<std::sync::Arc<ConfigOpts>, EnvsError> {
 				uclamp_min:		init_config.uclamp_min,
 				uclamp_max:		init_config.uclamp_max,
 				pty_fd:			init_config.pty_fd,
-				pidfd_ino:		pid,
 			}
 		)
 	)
