@@ -16,6 +16,9 @@ pub enum EnvsError {
 
 	#[error("FD conversion error: {0:#?}")]
 	FDConvertError(std::convert::Infallible),
+
+	#[error("Spawn error: {0:#?}")]
+	SpawnError(tokio::task::JoinError),
 }
 
 #[derive(Debug)]
@@ -38,6 +41,11 @@ pub struct ConfigOpts {
 	pub uclamp_max:		u32,
 
 	pub pty_fd:		Option<std::os::fd::OwnedFd>,
+
+	/**
+		The Init PID on host
+	*/
+	pub host_pid:		Option<u32>,
 }
 
 /**
@@ -47,16 +55,33 @@ pub async fn get() -> Result<std::sync::Arc<ConfigOpts>, EnvsError> {
 
 	let appid = app_id::get()?;
 
-	let daemon_name = format!("top.kimiblock.portable.{}", &appid);
+	let daemon_name = std::sync::Arc::new(format!("top.kimiblock.portable.{}", &appid));
 
 	let bus_connection = crate::ipc::IPC::connect()
 		.await
 		.map_err(EnvsError::ConnectBusError)
 		?;
 
-	let init_config = bus::get(&bus_connection, &daemon_name)
+	let pid = tokio::spawn(
+		bus::get_pid(
+			bus_connection.clone(),
+			daemon_name.clone(),
+		)
+	);
+
+	let init_config = bus::get(&bus_connection, daemon_name)
 		.await
 		?;
+
+	let pid = match pid.await.map_err(EnvsError::SpawnError)? {
+		Ok(v)	=> Some(v),
+		Err(e)	=> {
+			crate::logger::log_warn(
+				format!("Could not get host PID: {e:#?}")
+			);
+			None
+		}
+	};
 
 	Ok(
 		std::sync::Arc::new(
@@ -74,6 +99,7 @@ pub async fn get() -> Result<std::sync::Arc<ConfigOpts>, EnvsError> {
 				uclamp_min:		init_config.uclamp_min,
 				uclamp_max:		init_config.uclamp_max,
 				pty_fd:			init_config.pty_fd,
+				host_pid:		pid,
 			}
 		)
 	)
