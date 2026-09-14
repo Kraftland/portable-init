@@ -14,7 +14,7 @@ impl super::Init for SystemdStatus {
 					vec![
 						("READY", "1"),
 						//("NOTIFYACCESS", "main"), // Reset NotifyAccess
-						("MAINPID", &v.to_string()),
+						("MAINPIDFDID", &v.to_string()),
 					].iter(),
 				)
 					.map_err(SystemdError::NotifyError)
