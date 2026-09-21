@@ -30,7 +30,7 @@ pub fn log_fatal(msg: String) {
 	);
 	nix::sys::signal::kill(
 		nix::unistd::Pid::this(),
-		nix::sys::signal::SIGTERM,
+		nix::sys::signal::SIGABRT,
 	).unwrap();
 	std::thread::sleep(std::time::Duration::from_secs(5));
 	panic!("Init did not terminate on error")

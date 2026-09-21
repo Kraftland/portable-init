@@ -183,9 +183,17 @@ async fn run(
 						format!("Constructed command: {command:?}"),
 					);
 
-					let mut result = command
-						.spawn()
-						.expect("Could not spawn command");
+					let mut result = match command.spawn() {
+						Ok(v)	=> {
+							v
+						}
+						Err(e)	=> {
+							crate::logger::log_fatal(
+								format!("Could not start executable: {e:#?}")
+							);
+							return;
+						}
+					};
 
 					let status = tokio::select! {
 						_ = cancel_clone.cancelled() => {return}
