@@ -227,12 +227,17 @@ async fn main() -> std::process::ExitCode {
 		tokio::spawn(crate::inhibit::inhibit_suspend(cancel_token_clone));
 	};
 
-	let sigterm = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate());
+	let mut sigterm = {
+		use tokio::signal::unix::signal;
+		use tokio::signal::unix::SignalKind;
 
-	let mut sigterm = match sigterm {
-		Ok(v)	=> {v}
-		Err(e)	=> {
-			panic!("Could not register signal listener: {e:#?}")
+		let sigterm = signal(SignalKind::terminate());
+
+		match sigterm {
+			Ok(v)	=> {v}
+			Err(e)	=> {
+				panic!("Could not register signal listener: {e:#?}")
+			}
 		}
 	};
 
@@ -259,7 +264,8 @@ async fn main() -> std::process::ExitCode {
 			);
 		}
 	};
+
 	tokio::spawn(ipc_object.graceful_shutdown());
 
-	return std::process::ExitCode::SUCCESS
+	std::process::ExitCode::SUCCESS
 }
