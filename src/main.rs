@@ -14,9 +14,6 @@ mod cleaner;
 async fn main() -> std::process::ExitCode {
 	let cancel_token = tokio_util::sync::CancellationToken::new();
 
-	let cancel_token_clone = cancel_token.clone();
-	let replacer_spawn = tokio::spawn(process_env::Replacer::new(cancel_token_clone));
-
 	let config_opts = {
 		match envs::get().await {
 			Ok(v)	=> v,
@@ -27,6 +24,11 @@ async fn main() -> std::process::ExitCode {
 				panic!("Could not obtain configurations via IPC: {e:#?}");
 			}
 		}
+	};
+
+	let replacer_spawn = {
+		let cancel_token_clone = cancel_token.clone();
+		tokio::spawn(process_env::Replacer::new(cancel_token_clone))
 	};
 
 	// #[cfg(debug_assertions)]
