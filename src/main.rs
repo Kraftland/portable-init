@@ -29,6 +29,17 @@ async fn main() -> std::process::ExitCode {
 		}
 	};
 
+	// #[cfg(debug_assertions)]
+	// logger::log_debug(
+	// 	format!("Got configurations: {config_opts:#?}"),
+	// );
+
+	let seccomp_spawn = {
+		let conf_clone = config_opts.clone();
+		let token_clone = cancel_token.clone();
+		tokio::spawn(seccomp::load(conf_clone, token_clone))
+	};
+
 	let uclamp_ready = {
 		let conf_clone = config_opts.clone();
 		let cancel_token = tokio_util::sync::CancellationToken::new();
@@ -54,15 +65,29 @@ async fn main() -> std::process::ExitCode {
 		cancel_child
 	};
 
-	#[cfg(debug_assertions)]
-	logger::log_debug(
-		format!("Got configurations: {config_opts:#?}"),
-	);
-
-	let seccomp_spawn = {
+	let landlock_result = {
 		let conf_clone = config_opts.clone();
-		let token_clone = cancel_token.clone();
-		tokio::spawn(seccomp::load(conf_clone, token_clone))
+		tokio::spawn(async move {
+			if ! conf_clone.landlock {
+				return;
+			}
+			let rules = match landlock::compile_landlock_rules(&conf_clone).await {
+				Ok(v)	=> v,
+				Err(e)	=> {
+					logger::log_fatal(
+						format!("Could not compile landlock rules: {e:#?}"),
+					);
+					panic!("Could not compile landlock rules: {e:#?}")
+				}
+			};
+
+			// Wait for uclamp completion, because landlock breaks that
+			uclamp_ready.cancelled().await;
+
+			landlock::load_landlock(rules)
+				.await
+				.expect("Could not load landlock rules");
+		})
 	};
 
 
@@ -98,26 +123,6 @@ async fn main() -> std::process::ExitCode {
 		},
 	};
 
-	let conf_clone = config_opts.clone();
-	let landlock_result = tokio::spawn(async move {
-		if ! conf_clone.landlock {
-			return;
-		}
-		let rules = match landlock::compile_landlock_rules(&conf_clone).await {
-			Ok(v)	=> v,
-			Err(e)	=> {
-				logger::log_fatal(
-					format!("Could not compile landlock rules: {e:#?}"),
-				);
-				panic!("Could not compile landlock rules: {e:#?}")
-			}
-		};
-
-		landlock::load_landlock(rules)
-			.await
-			.expect("Could not load landlock rules");
-	});
-
 	{
 		let map = config_opts.file_map.clone();
 		match replacer.add(map).await {
@@ -130,7 +135,6 @@ async fn main() -> std::process::ExitCode {
 	}
 
 
-	let replacer_clone = replacer.clone();
 
 	let counter = match counter_spawn.await {
 		Ok(v)	=> v,
@@ -140,17 +144,11 @@ async fn main() -> std::process::ExitCode {
 		}
 	};
 
-	{
-		seccomp_spawn
-			.await
-			.expect("Could not spawn seccomp thread")
-			.expect("Could not load seccomp filter")
-	};
-
 	let spawner = {
+		let replacer_clone = replacer.clone();
 		let cancel_clone = cancel_token.clone();
 		let spawner = spawn::Spawner::new(
-			replacer,
+			replacer_clone,
 			cancel_clone,
 			counter,
 		);
@@ -163,31 +161,16 @@ async fn main() -> std::process::ExitCode {
 		}
 	};
 
-	let spawner_clone = spawner.clone();
-	let conf_clone = config_opts.clone();
-	let bus_publish_result = tokio::spawn(async move {
-		let result = ipc::IPC::publish(
-			conf_clone,
-			replacer_clone,
-			spawner_clone,
-		).await;
-		match result {
-			Ok(val)	=> {
-				logger::log_debug(format!("Connected to session bus"));
-				val
-			},
-			Err(e)	=> {
-				crate::logger::log_fatal(
-					format!("Could not connect to session bus: {e:#?}"),
-				);
-				panic!("{e:#?}");
-			},
-		}
-	});
+	{
+		seccomp_spawn
+			.await
+			.expect("Could not spawn seccomp thread")
+			.expect("Could not load seccomp filter");
 
-	landlock_result
-		.await
-		.expect("Could not load landlock rules");
+		landlock_result
+			.await
+			.expect("Could not load landlock rules");
+	};
 
 	spawner.spawn(
 		spawn::SpawnMessage::Start {
@@ -209,11 +192,22 @@ async fn main() -> std::process::ExitCode {
 		}
 	).await;
 
-	let ipc_object = match bus_publish_result.await {
-		Ok(val)	=>	val,
-		Err(e)	=>	{
-			logger::log_fatal(format!("Could not connect to Session Bus: {e:#?}"));
-			return std::process::ExitCode::FAILURE;
+	let ipc_object = {
+		let spawner_clone = spawner.clone();
+		let conf_clone = config_opts.clone();
+		let bus_publish_result = ipc::IPC::publish(
+			conf_clone,
+			replacer,
+			spawner_clone,
+		);
+
+
+		match bus_publish_result.await {
+			Ok(val)	=>	val,
+			Err(e)	=>	{
+				logger::log_fatal(format!("Could not connect to Session Bus: {e:#?}"));
+				return std::process::ExitCode::FAILURE;
+			}
 		}
 	};
 
