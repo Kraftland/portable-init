@@ -29,6 +29,31 @@ async fn main() -> std::process::ExitCode {
 		}
 	};
 
+	let uclamp_ready = {
+		let conf_clone = config_opts.clone();
+		let cancel_token = tokio_util::sync::CancellationToken::new();
+		let cancel_child = cancel_token.child_token();
+		tokio::task::spawn(async move {
+			match uclamp::apply_uclamp(
+				conf_clone
+			).await {
+				Ok((min, max))	=> {
+					#[cfg(debug_assertions)]
+					logger::log_debug(
+						format!("Successfully set uclamp.max to {min:?}:{max:?}"),
+					);
+				},
+				Err(e)	=> {
+					logger::log_warn(
+						format!("Could not set uclamp: {e:#?}"),
+					);
+				}
+			};
+			cancel_token.cancel();
+		});
+		cancel_child
+	};
+
 	#[cfg(debug_assertions)]
 	logger::log_debug(
 		format!("Got configurations: {config_opts:#?}"),
@@ -40,46 +65,6 @@ async fn main() -> std::process::ExitCode {
 		tokio::spawn(seccomp::load(conf_clone, token_clone))
 	};
 
-
-	let conf_clone = config_opts.clone();
-	let uclamp_result = tokio::task::spawn(
-		async {
-			match uclamp::apply_uclamp(
-				conf_clone
-			).await {
-				Ok((min, max))	=> {
-					logger::log_debug(
-						format!("Successfully set uclamp.max to {min:?}:{max:?}"),
-					);
-				},
-				Err(e)	=> {
-					logger::log_warn(
-						format!("Could not set uclamp: {e:#?}"),
-					);
-				}
-			};
-		}
-	);
-
-	let conf_clone = config_opts.clone();
-	let landlock_result = tokio::spawn(async move {
-		if ! conf_clone.landlock {
-			return;
-		}
-		let rules = match landlock::compile_landlock_rules(&conf_clone).await {
-			Ok(v)	=> v,
-			Err(e)	=> {
-				logger::log_fatal(
-					format!("Could not compile landlock rules: {e:#?}"),
-				);
-				panic!("Could not compile landlock rules: {e:#?}")
-			}
-		};
-
-		landlock::load_landlock(rules)
-			.await
-			.expect("Could not load landlock rules");
-	});
 
 	let counter_spawn = {
 		let cancel_token_clone = cancel_token.clone();
@@ -113,6 +98,26 @@ async fn main() -> std::process::ExitCode {
 		},
 	};
 
+	let conf_clone = config_opts.clone();
+	let landlock_result = tokio::spawn(async move {
+		if ! conf_clone.landlock {
+			return;
+		}
+		let rules = match landlock::compile_landlock_rules(&conf_clone).await {
+			Ok(v)	=> v,
+			Err(e)	=> {
+				logger::log_fatal(
+					format!("Could not compile landlock rules: {e:#?}"),
+				);
+				panic!("Could not compile landlock rules: {e:#?}")
+			}
+		};
+
+		landlock::load_landlock(rules)
+			.await
+			.expect("Could not load landlock rules");
+	});
+
 	{
 		let map = config_opts.file_map.clone();
 		match replacer.add(map).await {
@@ -140,19 +145,6 @@ async fn main() -> std::process::ExitCode {
 			.await
 			.expect("Could not spawn seccomp thread")
 			.expect("Could not load seccomp filter")
-	};
-
-	landlock_result
-		.await
-		.expect("Could not load landlock rules");
-
-	{
-		match uclamp_result.await {
-			Ok(_)	=> {}
-			Err(e)	=> {
-				logger::log_warn(format!("Could not spawn uclamp setter: {e:#?}"));
-			}
-		}
 	};
 
 	let spawner = {
@@ -192,6 +184,10 @@ async fn main() -> std::process::ExitCode {
 			},
 		}
 	});
+
+	landlock_result
+		.await
+		.expect("Could not load landlock rules");
 
 	spawner.spawn(
 		spawn::SpawnMessage::Start {
