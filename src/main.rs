@@ -36,11 +36,12 @@ async fn main() -> std::process::ExitCode {
 	// 	format!("Got configurations: {config_opts:#?}"),
 	// );
 
-	let seccomp_spawn = {
-		let conf_clone = config_opts.clone();
-		let token_clone = cancel_token.clone();
-		tokio::spawn(seccomp::load(conf_clone, token_clone))
-	};
+	let seccomp_spawn = tokio::spawn(
+		seccomp::load(
+			config_opts.clone(),
+			cancel_token.clone(),
+		),
+	);
 
 	let uclamp_ready = {
 		let conf_clone = config_opts.clone();
