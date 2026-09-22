@@ -126,18 +126,16 @@ async fn main() -> std::process::ExitCode {
 		},
 	};
 
-	{
-		let map = config_opts.file_map.clone();
-		match replacer.add(map).await {
-			Ok(_)	=> {}
-			Err(e)	=> {
-				logger::log_fatal(format!("Could not contact replacer: {e:#?}"));
-				panic!("{e:#?}");
+	let init_filemap = {
+		let config_opts = config_opts.clone();
+		let replacer = replacer.clone();
+		tokio::spawn(
+			async move {
+				let map = config_opts.file_map.clone();
+				replacer.add(map).await
 			}
-		};
-	}
-
-
+		)
+	};
 
 	let counter = match counter_spawn.await {
 		Ok(v)	=> v,
@@ -165,14 +163,24 @@ async fn main() -> std::process::ExitCode {
 	};
 
 	{
-		seccomp_spawn
-			.await
-			.expect("Could not spawn seccomp thread")
-			.expect("Could not load seccomp filter");
+		let (
+			seccomp_spawn,
+			landlock_spawn,
+			init_filemap,
+		) = tokio::join!(
+			seccomp_spawn,
+			landlock_result,
+			init_filemap,
+		);
 
-		landlock_result
-			.await
-			.expect("Could not load landlock rules");
+		seccomp_spawn
+			.expect("Could not setup Secure Computing Filter")
+			.expect("Could not setup Secure Computing Filter");
+		landlock_spawn
+			.expect("Could not setup landlock filter");
+		init_filemap
+			.expect("Could not initialise file mapping")
+			.expect("Could not initialise file mapping");
 	};
 
 	spawner.spawn(
