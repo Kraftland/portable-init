@@ -14,9 +14,6 @@ mod cleaner;
 async fn main() -> std::process::ExitCode {
 	let cancel_token = tokio_util::sync::CancellationToken::new();
 
-	let cancel_token_clone = cancel_token.clone();
-	let replacer_spawn = tokio::spawn(process_env::Replacer::new(cancel_token_clone));
-
 	let config_opts = {
 		match envs::get().await {
 			Ok(v)	=> v,
@@ -29,16 +26,22 @@ async fn main() -> std::process::ExitCode {
 		}
 	};
 
+	let replacer_spawn = {
+		let cancel_token_clone = cancel_token.clone();
+		tokio::spawn(process_env::Replacer::new(cancel_token_clone))
+	};
+
 	// #[cfg(debug_assertions)]
 	// logger::log_debug(
 	// 	format!("Got configurations: {config_opts:#?}"),
 	// );
 
-	let seccomp_spawn = {
-		let conf_clone = config_opts.clone();
-		let token_clone = cancel_token.clone();
-		tokio::spawn(seccomp::load(conf_clone, token_clone))
-	};
+	let seccomp_spawn = tokio::spawn(
+		seccomp::load(
+			config_opts.clone(),
+			cancel_token.clone(),
+		),
+	);
 
 	let uclamp_ready = {
 		let conf_clone = config_opts.clone();
@@ -123,18 +126,16 @@ async fn main() -> std::process::ExitCode {
 		},
 	};
 
-	{
-		let map = config_opts.file_map.clone();
-		match replacer.add(map).await {
-			Ok(_)	=> {}
-			Err(e)	=> {
-				logger::log_fatal(format!("Could not contact replacer: {e:#?}"));
-				panic!("{e:#?}");
+	let init_filemap = {
+		let config_opts = config_opts.clone();
+		let replacer = replacer.clone();
+		tokio::spawn(
+			async move {
+				let map = config_opts.file_map.clone();
+				replacer.add(map).await
 			}
-		};
-	}
-
-
+		)
+	};
 
 	let counter = match counter_spawn.await {
 		Ok(v)	=> v,
@@ -162,14 +163,24 @@ async fn main() -> std::process::ExitCode {
 	};
 
 	{
-		seccomp_spawn
-			.await
-			.expect("Could not spawn seccomp thread")
-			.expect("Could not load seccomp filter");
+		let (
+			seccomp_spawn,
+			landlock_spawn,
+			init_filemap,
+		) = tokio::join!(
+			seccomp_spawn,
+			landlock_result,
+			init_filemap,
+		);
 
-		landlock_result
-			.await
-			.expect("Could not load landlock rules");
+		seccomp_spawn
+			.expect("Could not setup Secure Computing Filter")
+			.expect("Could not setup Secure Computing Filter");
+		landlock_spawn
+			.expect("Could not setup landlock filter");
+		init_filemap
+			.expect("Could not initialise file mapping")
+			.expect("Could not initialise file mapping");
 	};
 
 	spawner.spawn(
@@ -216,12 +227,17 @@ async fn main() -> std::process::ExitCode {
 		tokio::spawn(crate::inhibit::inhibit_suspend(cancel_token_clone));
 	};
 
-	let sigterm = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate());
+	let mut sigterm = {
+		use tokio::signal::unix::signal;
+		use tokio::signal::unix::SignalKind;
 
-	let mut sigterm = match sigterm {
-		Ok(v)	=> {v}
-		Err(e)	=> {
-			panic!("Could not register signal listener: {e:#?}")
+		let sigterm = signal(SignalKind::terminate());
+
+		match sigterm {
+			Ok(v)	=> {v}
+			Err(e)	=> {
+				panic!("Could not register signal listener: {e:#?}")
+			}
 		}
 	};
 
@@ -248,7 +264,8 @@ async fn main() -> std::process::ExitCode {
 			);
 		}
 	};
+
 	tokio::spawn(ipc_object.graceful_shutdown());
 
-	return std::process::ExitCode::SUCCESS
+	std::process::ExitCode::SUCCESS
 }
