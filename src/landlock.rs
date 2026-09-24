@@ -51,7 +51,6 @@ impl DefinedRules {
 				"/opt".into(),
 				"/sbin".into(),
 				"/usr".into(),
-				"/sys".into(),
 			],
 			rw: vec![
 				home.to_string_lossy().to_string(),
