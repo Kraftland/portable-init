@@ -51,19 +51,21 @@ impl DefinedRules {
 				"/opt".into(),
 				"/sbin".into(),
 				"/usr".into(),
-				"/sys".into(),
 			],
 			rw: vec![
 				home.to_string_lossy().to_string(),
 				"/run".into(),
 				"/tmp".into(),
-				"/sys/module".into(),
 			],
 			full: vec![
 				"/dev".into(),
 				"/proc".into(),
 				"/sys/devices".into(),
 				"/sys/class".into(),
+				"/sys/module".into(),
+
+				// Removing this breaks DualSense
+				"/sys/kernel".into(),
 			],
 			read_dir: vec![
 				"/".into(),
