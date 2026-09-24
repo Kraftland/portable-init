@@ -57,13 +57,15 @@ impl DefinedRules {
 				home.to_string_lossy().to_string(),
 				"/run".into(),
 				"/tmp".into(),
-				"/sys/module".into(),
 			],
 			full: vec![
 				"/dev".into(),
 				"/proc".into(),
 				"/sys/devices".into(),
+				"/sys/dev".into(),
 				"/sys/class".into(),
+				"/sys/module".into(),
+				"/sys/kernel".into(),
 			],
 			read_dir: vec![
 				"/".into(),
