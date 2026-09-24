@@ -65,17 +65,30 @@ impl super::Init for SystemdStatus {
 
 impl super::UpdateStatus for SystemdStatus {
 	async fn update(&self, status: &super::SandboxStatus) -> Result<(), Self::StatusError> {
-		libsystemd::daemon::notify(
-			false,
-			&vec![
-				libsystemd::daemon::NotifyState::Status(
-					status.to_string()
+		match status {
+			super::SandboxStatus::Ready { tracked_pid: _ }	=> {
+				libsystemd::daemon::notify(
+					false,
+					&vec![
+						libsystemd::daemon::NotifyState::Status(
+							status.to_string()
+						)
+					],
 				)
-			],
-		)
-			.map_err(SystemdError::NotifyError)
-			?;
-
+					.map_err(SystemdError::NotifyError)
+					?;
+			}
+			super::SandboxStatus::Stopping			=> {
+				libsystemd::daemon::notify(
+					false,
+					&vec![
+						libsystemd::daemon::NotifyState::Stopping
+					],
+				)
+					.map_err(SystemdError::NotifyError)
+					?;
+			}
+		}
 		Ok(())
 	}
 
