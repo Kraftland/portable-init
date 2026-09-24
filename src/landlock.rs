@@ -63,6 +63,8 @@ impl DefinedRules {
 				"/sys/devices".into(),
 				"/sys/class".into(),
 				"/sys/module".into(),
+
+				// Removing this breaks DualSense
 				"/sys/kernel".into(),
 			],
 			read_dir: vec![
