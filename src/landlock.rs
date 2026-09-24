@@ -61,7 +61,6 @@ impl DefinedRules {
 				"/dev".into(),
 				"/proc".into(),
 				"/sys/devices".into(),
-				"/sys/dev".into(),
 				"/sys/class".into(),
 				"/sys/module".into(),
 				"/sys/kernel".into(),
