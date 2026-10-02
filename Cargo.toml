@@ -1,6 +1,6 @@
 [package]
 name = "init"
-version = "20.2.0"
+version = "21.0.0"
 edition = "2024"
 
 [profile.release]
