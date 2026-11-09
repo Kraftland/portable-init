@@ -65,7 +65,24 @@ pub async fn compile_filter (
 		.map_err(SeccompError::AddRuleError)
 		?;
 
-
+	// Handle deny list via the kernel, avoid spamming the journal and hurting performance.
+	// Should be fine since we either use Allow or Notify as default action
+	{
+		for val in syscall_list.deny_list.iter() {
+				let result = filter_result.add_rule(
+					libseccomp::ScmpAction::Errno(
+						nix::errno::Errno::EPERM as i32
+					),
+					*val,
+				);
+				match result {
+					Ok(_)	=> {},
+					Err(e)	=> {
+						return Err(SeccompError::AddRuleError(e))
+					},
+				}
+			};
+	};
 
 	match config_env.seccomp_whitelist {
 		true => {
@@ -83,20 +100,7 @@ pub async fn compile_filter (
 				}
 			};
 		}
-		false => {
-			for val in syscall_list.deny_list.iter() {
-				let result = filter_result.add_rule(
-					libseccomp::ScmpAction::Notify,
-					*val,
-				);
-				match result {
-					Ok(_)	=> {},
-					Err(e)	=> {
-						return Err(SeccompError::AddRuleError(e))
-					},
-				}
-			};
-		}
+		false => {}
 	}
 
 	match config_env.debugging {
