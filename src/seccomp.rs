@@ -11,9 +11,7 @@ mod filter;
 pub async fn load(
 	config:		std::sync::Arc<crate::envs::ConfigOpts>,
 ) -> Result<(), SeccompError> {
-	let list = list::compile_syscall_list()
-		.map_err(SeccompError::CompileListError)
-		?;
+	let list = list::compile_syscall_list();
 
 	let seccomp_filter = filter::compile_filter(
 		config,
@@ -22,16 +20,9 @@ pub async fn load(
 		.await
 		?;
 
-	let unotify_fd = filter::load_seccomp_filter(seccomp_filter)
-		?;
-
-	std::thread::spawn(
-		move || {
-			unotify::process_seccomp_unotify(unotify_fd, cancel_token);
-		},
-	);
-
-	Ok(())
+	seccomp_filter
+		.load()
+		.map_err(SeccompError::LoadFilterError)
 }
 
 #[derive(Error, Debug)]
