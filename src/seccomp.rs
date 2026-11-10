@@ -27,25 +27,14 @@ pub async fn load(
 
 #[derive(Error, Debug)]
 pub enum SeccompError {
-	#[error("Could not compile seccomp syscall list: {0:#?}")]
-	CompileListError(SyscallCompileError),
-
-	#[error("Could not create seccomp filter: {0:?}")]
+	#[error("Could not create seccomp filter: {0}")]
 	CreateFilterError(libseccomp::error::SeccompError),
 
-	#[error("Could not add filter rule: {0:?}")]
+	#[error("Could not add filter rule: {0}")]
 	AddRuleError(libseccomp::error::SeccompError),
 
-	#[error("Could not load filter into kernel: {0:?}")]
+	#[error("Could not load filter into kernel: {0}")]
 	LoadFilterError(libseccomp::error::SeccompError),
-
-	#[error("Could not get notify fd: {0:?}")]
-	GetFdError(libseccomp::error::SeccompError),
-}
-
-#[derive(Error,Debug)]
-pub enum SyscallCompileError {
-
 }
 
 #[derive(Debug, Clone)]
