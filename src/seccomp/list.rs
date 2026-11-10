@@ -5,7 +5,7 @@ use crate::seccomp::SyscallList;
 	Compiles a system call list
 */
 pub fn compile_syscall_list(
-) -> Result<super::SyscallList, super::SyscallCompileError> {
+) -> super::SyscallList {
 	struct SyscallByNames {
 		async_io:	Vec<String>, // @aio
 		basic_io:	Vec<String>, // @basic-io
@@ -696,7 +696,7 @@ pub fn compile_syscall_list(
 		)
 	);
 
-	Ok(ret)
+	ret
 
 }
 
