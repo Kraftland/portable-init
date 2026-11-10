@@ -1,7 +1,6 @@
 use thiserror::Error;
 
 mod list;
-mod unotify;
 mod filter;
 
 /**
@@ -11,7 +10,6 @@ mod filter;
 */
 pub async fn load(
 	config:		std::sync::Arc<crate::envs::ConfigOpts>,
-	cancel_token:	tokio_util::sync::CancellationToken,
 ) -> Result<(), SeccompError> {
 	let list = list::compile_syscall_list()
 		.map_err(SeccompError::CompileListError)
