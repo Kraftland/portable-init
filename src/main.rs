@@ -39,7 +39,6 @@ async fn main() -> std::process::ExitCode {
 	let seccomp_spawn = tokio::spawn(
 		seccomp::load(
 			config_opts.clone(),
-			cancel_token.clone(),
 		),
 	);
 

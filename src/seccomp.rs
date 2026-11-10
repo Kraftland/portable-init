@@ -1,7 +1,6 @@
 use thiserror::Error;
 
 mod list;
-mod unotify;
 mod filter;
 
 /**
@@ -11,11 +10,8 @@ mod filter;
 */
 pub async fn load(
 	config:		std::sync::Arc<crate::envs::ConfigOpts>,
-	cancel_token:	tokio_util::sync::CancellationToken,
 ) -> Result<(), SeccompError> {
-	let list = list::compile_syscall_list()
-		.map_err(SeccompError::CompileListError)
-		?;
+	let list = list::compile_syscall_list();
 
 	let seccomp_filter = filter::compile_filter(
 		config,
@@ -24,39 +20,21 @@ pub async fn load(
 		.await
 		?;
 
-	let unotify_fd = filter::load_seccomp_filter(seccomp_filter)
-		?;
-
-	std::thread::spawn(
-		move || {
-			unotify::process_seccomp_unotify(unotify_fd, cancel_token);
-		},
-	);
-
-	Ok(())
+	seccomp_filter
+		.load()
+		.map_err(SeccompError::LoadFilterError)
 }
 
 #[derive(Error, Debug)]
 pub enum SeccompError {
-	#[error("Could not compile seccomp syscall list: {0:#?}")]
-	CompileListError(SyscallCompileError),
-
-	#[error("Could not create seccomp filter: {0:?}")]
+	#[error("Could not create seccomp filter: {0}")]
 	CreateFilterError(libseccomp::error::SeccompError),
 
-	#[error("Could not add filter rule: {0:?}")]
+	#[error("Could not add filter rule: {0}")]
 	AddRuleError(libseccomp::error::SeccompError),
 
-	#[error("Could not load filter into kernel: {0:?}")]
+	#[error("Could not load filter into kernel: {0}")]
 	LoadFilterError(libseccomp::error::SeccompError),
-
-	#[error("Could not get notify fd: {0:?}")]
-	GetFdError(libseccomp::error::SeccompError),
-}
-
-#[derive(Error,Debug)]
-pub enum SyscallCompileError {
-
 }
 
 #[derive(Debug, Clone)]

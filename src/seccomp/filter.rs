@@ -1,5 +1,7 @@
 /**
 	Compile a Secure Computing filter
+
+	Returns a filter to load, unotify is not used.
 */
 pub async fn compile_filter (
 	config_env:	std::sync::Arc<crate::envs::ConfigOpts>,
@@ -10,7 +12,9 @@ pub async fn compile_filter (
 	let mut filter_result = match config_env.seccomp_whitelist {
 		true	=>	{
 			let filter = libseccomp::ScmpFilterContext::new(
-				libseccomp::ScmpAction::Notify,
+				libseccomp::ScmpAction::Errno(
+					nix::errno::Errno::EPERM as i32
+				),
 			);
 			let mut filter = match filter {
 				Ok(val) => val,
@@ -53,31 +57,13 @@ pub async fn compile_filter (
 		}
 	};
 
-	match filter_result.add_arch(libseccomp::ScmpArch::Native) {
-		Ok(_)	=>	{},
-		Err(e)	=>	{
-			return Err(SeccompError::AddRuleError(e));
-		},
-	};
+	filter_result.add_arch(libseccomp::ScmpArch::Native)
+		.map_err(SeccompError::AddRuleError)
+		?;
 
 	filter_result.set_ctl_tsync(true)
 		.map_err(SeccompError::AddRuleError)
 		?;
-
-	// Handle deny list via the kernel, avoid spamming the journal and hurting performance.
-	// Should be fine since we either use Allow or Notify as default action
-	{
-		for val in syscall_list.deny_list.iter() {
-				filter_result.add_rule(
-					libseccomp::ScmpAction::Errno(
-						nix::errno::Errno::EPERM as i32
-					),
-					*val,
-				)
-					.map_err(SeccompError::AddRuleError)
-					?;
-			};
-	};
 
 	match config_env.seccomp_whitelist {
 		true => {
@@ -94,7 +80,20 @@ pub async fn compile_filter (
 				}
 			};
 		}
-		false => {}
+		false => {
+			// Handle deny list via the kernel, avoid spamming the journal and hurting performance
+
+			for val in syscall_list.deny_list.iter() {
+				filter_result.add_rule(
+					libseccomp::ScmpAction::Errno(
+						nix::errno::Errno::EPERM as i32
+					),
+					*val,
+				)
+					.map_err(SeccompError::AddRuleError)
+					?;
+			}
+		}
 	}
 
 	match config_env.debugging {
@@ -117,37 +116,18 @@ pub async fn compile_filter (
 		false	=> {
 			if ! config_env.seccomp_whitelist {
 				for val in syscall_list.debug_list.iter() {
-					let result = filter_result.add_rule(
-						libseccomp::ScmpAction::Notify,
-						*val,
-					);
-					match result {
-						Ok(_)	=> {},
-						Err(e)	=> {
-							return Err(SeccompError::AddRuleError(e))
-						},
-					}
+					filter_result.add_rule(
+					libseccomp::ScmpAction::Errno(
+						nix::errno::Errno::EPERM as i32
+					),
+					*val,
+				)
+					.map_err(SeccompError::AddRuleError)
+					?;
 				}
 			}
 		}
 	};
 
 	Ok(filter_result)
-}
-
-/// Loads a Secure Computing filter, does not spawn a unotify instance
-pub fn load_seccomp_filter (
-	filter_compiled: libseccomp::ScmpFilterContext,
-) -> Result<libseccomp::ScmpFd, super::SeccompError> {
-	use super::SeccompError;
-	match filter_compiled.load() {
-		Ok(_)	=> {},
-		Err(e)	=> return Err(SeccompError::LoadFilterError(e))
-	};
-
-	let result = filter_compiled.get_notify_fd();
-	match result {
-		Ok(fd)	=> Ok(fd),
-		Err(e)	=> return Err(SeccompError::GetFdError(e))
-	}
 }
