@@ -11,7 +11,6 @@ pub async fn compile_filter (
 		true	=>	{
 			let filter = libseccomp::ScmpFilterContext::new(
 				libseccomp::ScmpAction::Notify,
-				//libseccomp::ScmpAction::Log,
 			);
 			let mut filter = match filter {
 				Ok(val) => val,
@@ -69,24 +68,19 @@ pub async fn compile_filter (
 	// Should be fine since we either use Allow or Notify as default action
 	{
 		for val in syscall_list.deny_list.iter() {
-				let result = filter_result.add_rule(
+				filter_result.add_rule(
 					libseccomp::ScmpAction::Errno(
 						nix::errno::Errno::EPERM as i32
 					),
 					*val,
-				);
-				match result {
-					Ok(_)	=> {},
-					Err(e)	=> {
-						return Err(SeccompError::AddRuleError(e))
-					},
-				}
+				)
+					.map_err(SeccompError::AddRuleError)
+					?;
 			};
 	};
 
 	match config_env.seccomp_whitelist {
 		true => {
-			//println!("Appending allow list: {:?}", &syscall_list.allow_list);
 			for val in syscall_list.allow_list.iter() {
 				let result = filter_result.add_rule(
 					libseccomp::ScmpAction::Allow,
@@ -118,7 +112,6 @@ pub async fn compile_filter (
 						},
 					}
 				}
-			} else {
 			}
 		}
 		false	=> {
