@@ -34,8 +34,6 @@ pub struct ConfigOpts {
 	pub target:		String,
 	pub args:		Vec<String>,
 	pub bus_conn:		zbus::Connection,
-	pub uclamp_min:		u32,
-	pub uclamp_max:		u32,
 
 	pub pty_fd:		Option<std::os::fd::OwnedFd>,
 }
@@ -72,8 +70,6 @@ pub async fn get() -> Result<std::sync::Arc<ConfigOpts>, EnvsError> {
 				target:			init_config.target_exec,
 				args:			init_config.target_args,
 				bus_conn:		bus_connection,
-				uclamp_min:		init_config.uclamp_min,
-				uclamp_max:		init_config.uclamp_max,
 				pty_fd:			init_config.pty_fd,
 			}
 		)

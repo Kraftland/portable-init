@@ -15,8 +15,6 @@ trait Info {
 		bool,
 		String,
 		Vec<String>,
-		u32,
-		u32,
 		bool,
 		bool,
 	)>;
@@ -66,20 +64,6 @@ pub struct InitInfo {
 	pub target_args:	Vec<String>,
 
 	/**
-		uclamp_min describes the minimum guaranteed performance operating point.
-
-		It is clamped between 0 and 100, as per cgroup v2 specifications.
-	*/
-	pub uclamp_min:		u32,
-	/**
-		uclamp_max describes the maximum performance operating point.
-		It operates as a ceiling limit.
-
-		It is clamped between 0 and 100, as per cgroup v2 specifications.
-	*/
-	pub uclamp_max:		u32,
-
-	/**
 		the file descriptor for initial pty streaming
 
 		Could be none
@@ -119,7 +103,7 @@ pub async fn get(
 	use std::os::fd::OwnedFd;
 
 	let pty = {
-		if info.9 {
+		if info.7 {
 			Some(
 				OwnedFd::try_from(
 					proxy
@@ -144,10 +128,8 @@ pub async fn get(
 		allow_debug:		info.4,
 		target_exec:		info.5,
 		target_args:		info.6,
-		uclamp_min:		info.7,
-		uclamp_max:		info.8,
 		pty_fd:			pty,
-		seccomp_whitelist:	info.10,
+		seccomp_whitelist:	info.8,
 	};
 
 	Ok(ret)
