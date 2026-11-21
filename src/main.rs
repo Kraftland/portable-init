@@ -2,7 +2,6 @@ mod logger;
 mod seccomp;
 mod envs;
 mod landlock;
-mod uclamp;
 mod spawn;
 mod counter;
 mod ipc;
@@ -42,31 +41,6 @@ async fn main() -> std::process::ExitCode {
 		),
 	);
 
-	let uclamp_ready = {
-		let conf_clone = config_opts.clone();
-		let cancel_token = tokio_util::sync::CancellationToken::new();
-		let cancel_child = cancel_token.child_token();
-		tokio::task::spawn(async move {
-			match uclamp::apply_uclamp(
-				conf_clone
-			).await {
-				Ok((min, max))	=> {
-					#[cfg(debug_assertions)]
-					logger::log_debug(
-						format!("Successfully set uclamp.max to {min:?}:{max:?}"),
-					);
-				},
-				Err(e)	=> {
-					logger::log_warn(
-						format!("Could not set uclamp: {e:#?}"),
-					);
-				}
-			};
-			cancel_token.cancel();
-		});
-		cancel_child
-	};
-
 	let landlock_result = {
 		let conf_clone = config_opts.clone();
 		tokio::spawn(async move {
@@ -82,9 +56,6 @@ async fn main() -> std::process::ExitCode {
 					panic!("Could not compile landlock rules: {e:#?}")
 				}
 			};
-
-			// Wait for uclamp completion, because landlock breaks that
-			uclamp_ready.cancelled().await;
 
 			landlock::load_landlock(rules)
 				.await
