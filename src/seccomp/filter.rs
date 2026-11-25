@@ -70,6 +70,11 @@ pub async fn compile_filter (
 		.map_err(SeccompError::AddRuleError)
 		?;
 
+	filter_result
+		.set_ctl_optimize(2)
+		.map_err(SeccompError::AddRuleError)
+		?;
+
 	match config_env.seccomp_whitelist {
 		true => {
 			for val in syscall_list.allow_list.iter() {
